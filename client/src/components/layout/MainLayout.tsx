@@ -1,4 +1,4 @@
-import React, { useState, ReactNode } from 'react';
+import React, { useState, ReactNode, useEffect } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
@@ -28,6 +28,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const handleAIChatClose = () => {
     setAiChatOpen(false);
   };
+
+  // Set up global event listener for AI Chat button
+  useEffect(() => {
+    const handleGlobalAIChatOpen = () => {
+      setAiChatOpen(true);
+    };
+    
+    window.addEventListener('openAIChat', handleGlobalAIChatOpen);
+    
+    return () => {
+      window.removeEventListener('openAIChat', handleGlobalAIChatOpen);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
