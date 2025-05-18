@@ -12,7 +12,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ content, isUser, timestamp })
   const renderContent = (text: string) => {
     // Convert line breaks to JSX breaks
     const withLineBreaks = text.split('\n').map((line, i) => (
-      <React.Fragment key={i}>
+      <React.Fragment key={i.toString()}>
         {line}
         {i < text.split('\n').length - 1 && <br />}
       </React.Fragment>

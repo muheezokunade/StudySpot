@@ -477,4 +477,225 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { db } from './db';
+import { eq, and, like, or } from 'drizzle-orm';
+
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
+    const [user] = await db.update(users).set(data).where(eq(users.id, id)).returning();
+    return user;
+  }
+
+  async getCourses(): Promise<Course[]> {
+    return db.select().from(courses);
+  }
+
+  async getCourse(id: number): Promise<Course | undefined> {
+    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    return course;
+  }
+
+  async getCourseByCode(code: string): Promise<Course | undefined> {
+    const [course] = await db.select().from(courses).where(eq(courses.code, code));
+    return course;
+  }
+
+  async createCourse(insertCourse: InsertCourse): Promise<Course> {
+    const [course] = await db.insert(courses).values(insertCourse).returning();
+    return course;
+  }
+
+  async getCourseMaterials(courseId?: number): Promise<CourseMaterial[]> {
+    if (courseId) {
+      return db.select().from(courseMaterials).where(eq(courseMaterials.courseId, courseId));
+    }
+    return db.select().from(courseMaterials);
+  }
+
+  async getCourseMaterial(id: number): Promise<CourseMaterial | undefined> {
+    const [material] = await db.select().from(courseMaterials).where(eq(courseMaterials.id, id));
+    return material;
+  }
+
+  async createCourseMaterial(insertMaterial: InsertCourseMaterial): Promise<CourseMaterial> {
+    const [material] = await db.insert(courseMaterials).values(insertMaterial).returning();
+    return material;
+  }
+
+  async getExams(courseId?: number): Promise<Exam[]> {
+    if (courseId) {
+      return db.select().from(exams).where(eq(exams.courseId, courseId));
+    }
+    return db.select().from(exams);
+  }
+
+  async getExam(id: number): Promise<Exam | undefined> {
+    const [exam] = await db.select().from(exams).where(eq(exams.id, id));
+    return exam;
+  }
+
+  async createExam(insertExam: InsertExam): Promise<Exam> {
+    const [exam] = await db.insert(exams).values(insertExam).returning();
+    return exam;
+  }
+
+  async getQuestions(courseId: number): Promise<Question[]> {
+    return db.select().from(questions).where(eq(questions.courseId, courseId));
+  }
+
+  async getQuestion(id: number): Promise<Question | undefined> {
+    const [question] = await db.select().from(questions).where(eq(questions.id, id));
+    return question;
+  }
+
+  async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
+    const [question] = await db.insert(questions).values(insertQuestion).returning();
+    return question;
+  }
+
+  async getUserProgress(userId: number): Promise<UserProgress[]> {
+    return db.select().from(userProgress).where(eq(userProgress.userId, userId));
+  }
+
+  async createUserProgress(insertProgress: InsertUserProgress): Promise<UserProgress> {
+    const [progress] = await db.insert(userProgress).values(insertProgress).returning();
+    return progress;
+  }
+
+  async updateUserProgress(id: number, data: Partial<UserProgress>): Promise<UserProgress | undefined> {
+    const [progress] = await db.update(userProgress).set(data).where(eq(userProgress.id, id)).returning();
+    return progress;
+  }
+
+  async getJobs(filters?: Partial<{ location: string, type: string, faculty: string }>): Promise<Job[]> {
+    if (!filters) {
+      return db.select().from(jobs);
+    }
+
+    const conditions = [];
+    if (filters.location) {
+      conditions.push(eq(jobs.location, filters.location));
+    }
+    if (filters.type) {
+      conditions.push(eq(jobs.type, filters.type));
+    }
+    if (filters.faculty) {
+      conditions.push(like(jobs.description, `%${filters.faculty}%`));
+    }
+
+    if (conditions.length === 0) {
+      return db.select().from(jobs);
+    }
+
+    return db.select().from(jobs).where(and(...conditions));
+  }
+
+  async getJob(id: number): Promise<Job | undefined> {
+    const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
+    return job;
+  }
+
+  async createJob(insertJob: InsertJob): Promise<Job> {
+    const [job] = await db.insert(jobs).values(insertJob).returning();
+    return job;
+  }
+
+  async getForumPosts(category?: string): Promise<ForumPost[]> {
+    if (category) {
+      return db.select().from(forumPosts).where(eq(forumPosts.category, category));
+    }
+    return db.select().from(forumPosts);
+  }
+
+  async getForumPost(id: number): Promise<ForumPost | undefined> {
+    const [post] = await db.select().from(forumPosts).where(eq(forumPosts.id, id));
+    return post;
+  }
+
+  async createForumPost(insertPost: InsertForumPost): Promise<ForumPost> {
+    const [post] = await db.insert(forumPosts).values(insertPost).returning();
+    return post;
+  }
+
+  async getForumReplies(postId: number): Promise<ForumReply[]> {
+    return db.select().from(forumReplies).where(eq(forumReplies.postId, postId));
+  }
+
+  async createForumReply(insertReply: InsertForumReply): Promise<ForumReply> {
+    const [reply] = await db.insert(forumReplies).values(insertReply).returning();
+    return reply;
+  }
+
+  async incrementPostViews(postId: number): Promise<void> {
+    await db
+      .update(forumPosts)
+      .set({ views: (fPost) => fPost.views + 1 })
+      .where(eq(forumPosts.id, postId));
+  }
+
+  async getChatMessages(userId: number): Promise<ChatMessage[]> {
+    return db.select().from(chatMessages).where(eq(chatMessages.userId, userId));
+  }
+
+  async createChatMessage(insertMessage: InsertChatMessage): Promise<ChatMessage> {
+    const [message] = await db.insert(chatMessages).values(insertMessage).returning();
+    return message;
+  }
+
+  async getChatUsage(userId: number): Promise<ChatUsage | undefined> {
+    const [usage] = await db.select().from(chatUsage).where(eq(chatUsage.userId, userId));
+    return usage;
+  }
+
+  async updateChatUsage(userId: number, used: number): Promise<ChatUsage> {
+    const existingUsage = await this.getChatUsage(userId);
+    
+    if (existingUsage) {
+      const [usage] = await db
+        .update(chatUsage)
+        .set({ messagesUsed: existingUsage.messagesUsed + used })
+        .where(eq(chatUsage.userId, userId))
+        .returning();
+      return usage;
+    } else {
+      const [usage] = await db
+        .insert(chatUsage)
+        .values({ userId, messagesUsed: used })
+        .returning();
+      return usage;
+    }
+  }
+
+  async getUserSubscription(userId: number): Promise<Subscription | undefined> {
+    const [subscription] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId));
+    return subscription;
+  }
+
+  async createSubscription(insertSub: InsertSubscription): Promise<Subscription> {
+    const [subscription] = await db.insert(subscriptions).values(insertSub).returning();
+    return subscription;
+  }
+
+  async updateSubscription(id: number, data: Partial<Subscription>): Promise<Subscription | undefined> {
+    const [subscription] = await db.update(subscriptions).set(data).where(eq(subscriptions.id, id)).returning();
+    return subscription;
+  }
+}
+
+// Use the database storage to replace the in-memory storage
+export const storage = new DatabaseStorage();

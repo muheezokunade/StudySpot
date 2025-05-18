@@ -121,13 +121,13 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuOpen, onAIChatOpen }) => {
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/profile">
-                        <a className="cursor-pointer w-full">My Profile</a>
+                      <Link href="/profile" className="cursor-pointer w-full">
+                        My Profile
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/settings">
-                        <a className="cursor-pointer w-full">Settings</a>
+                      <Link href="/settings" className="cursor-pointer w-full">
+                        Settings
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
