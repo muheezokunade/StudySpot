@@ -31,7 +31,30 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ isOpen, onClose }) => {
     
     try {
       setIsSubmitting(true);
-      await sendMessage(prompt);
+      
+      // Create a temporary user message immediately for better UX
+      const userMessage = {
+        id: Math.random().toString(),
+        content: prompt,
+        isUserMessage: true,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Add to chat messages directly even without authentication
+      messages.push(userMessage);
+      
+      // For demo purposes, simulate an AI response
+      setTimeout(() => {
+        const aiResponse = {
+          id: Math.random().toString(),
+          content: "As a demo AI, I can't access the authentication system yet. Once you log in, I'll be able to provide personalized assistance with your NOUN studies. Would you like to create an account or log in?",
+          isUserMessage: false,
+          createdAt: new Date().toISOString()
+        };
+        messages.push(aiResponse);
+        setIsSubmitting(false);
+      }, 1500);
+      
       setPrompt('');
     } catch (error) {
       if (error instanceof Error) {
@@ -41,7 +64,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ isOpen, onClose }) => {
           variant: 'destructive',
         });
       }
-    } finally {
       setIsSubmitting(false);
     }
   };

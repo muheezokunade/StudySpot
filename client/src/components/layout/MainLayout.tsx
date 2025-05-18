@@ -57,10 +57,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         onClose={handleAIChatClose} 
       />
       
-      {/* Floating AI Chat Button */}
+      {/* Floating AI Chat Button - positioned higher to avoid overlap */}
       <button 
         onClick={handleAIChatOpen}
-        className="fixed bottom-6 right-6 z-40 bg-forest-600 text-white rounded-full p-3 shadow-lg hover:bg-forest-700 transition-colors"
+        className="fixed bottom-20 right-6 z-40 bg-forest-600 text-white rounded-full p-3 shadow-lg hover:bg-forest-700 transition-colors"
         aria-label="Open AI Chat"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
