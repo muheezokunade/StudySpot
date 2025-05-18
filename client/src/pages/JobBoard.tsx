@@ -10,7 +10,7 @@ import {
   GraduationCap,
   Filter
 } from 'lucide-react';
-import { Job } from '@/types';
+import { Job } from '../types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
