@@ -10,13 +10,16 @@ interface ChatMessageProps {
 const ChatMessage: React.FC<ChatMessageProps> = ({ content, isUser, timestamp }) => {
   // Render markdown-style content with proper formatting
   const renderContent = (text: string) => {
-    // Convert line breaks to JSX breaks
-    const withLineBreaks = text.split('\n').map((line, i) => (
-      <React.Fragment key={i}>
-        {line}
-        {i < text.split('\n').length - 1 && <br />}
-      </React.Fragment>
-    ));
+    // Convert line breaks to JSX breaks and avoid adding any data-* attributes to Fragment
+    const withLineBreaks = text.split('\n').map((line, i) => {
+      const isLastLine = i === text.split('\n').length - 1;
+      return (
+        <React.Fragment key={i}>
+          {line}
+          {!isLastLine && <br />}
+        </React.Fragment>
+      );
+    });
     
     return withLineBreaks;
   };
