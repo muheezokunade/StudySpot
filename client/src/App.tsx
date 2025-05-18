@@ -12,20 +12,97 @@ import Summary from "./pages/Summary";
 import JobBoard from "./pages/JobBoard";
 import Forum from "./pages/Forum";
 import Profile from "./pages/Profile";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
+import ForgotPassword from "./pages/ForgotPassword";
+import Admin from "./pages/Admin";
+import { useAuthContext } from "./context/AuthContext";
+
+// Protected route component to handle authentication
+const ProtectedRoute = ({ component: Component, ...rest }: any) => {
+  const { isAuthenticated, isLoading } = useAuthContext();
+  
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+  
+  if (!isAuthenticated) {
+    window.location.href = '/login';
+    return null;
+  }
+  
+  return <Component {...rest} />;
+};
+
+// Public layout doesn't include sidebar and app navigation
+const PublicLayout = ({ children }: { children: React.ReactNode }) => (
+  <div>{children}</div>
+);
 
 function Router() {
   return (
-    <MainLayout>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/exam-prep" component={ExamPrep} />
-        <Route path="/summary" component={Summary} />
-        <Route path="/jobs" component={JobBoard} />
-        <Route path="/forum" component={Forum} />
-        <Route path="/profile" component={Profile} />
-        <Route component={NotFound} />
-      </Switch>
-    </MainLayout>
+    <Switch>
+      {/* Auth routes with PublicLayout */}
+      <Route path="/login">
+        <PublicLayout>
+          <Login />
+        </PublicLayout>
+      </Route>
+      <Route path="/signup">
+        <PublicLayout>
+          <SignUp />
+        </PublicLayout>
+      </Route>
+      <Route path="/forgot-password">
+        <PublicLayout>
+          <ForgotPassword />
+        </PublicLayout>
+      </Route>
+
+      {/* App routes with MainLayout */}
+      <Route path="/">
+        <MainLayout>
+          <Home />
+        </MainLayout>
+      </Route>
+      <Route path="/exam-prep">
+        <MainLayout>
+          <ExamPrep />
+        </MainLayout>
+      </Route>
+      <Route path="/summary">
+        <MainLayout>
+          <Summary />
+        </MainLayout>
+      </Route>
+      <Route path="/jobs">
+        <MainLayout>
+          <JobBoard />
+        </MainLayout>
+      </Route>
+      <Route path="/forum">
+        <MainLayout>
+          <Forum />
+        </MainLayout>
+      </Route>
+      <Route path="/profile">
+        <MainLayout>
+          <Profile />
+        </MainLayout>
+      </Route>
+      <Route path="/admin">
+        <MainLayout>
+          <Admin />
+        </MainLayout>
+      </Route>
+
+      {/* 404 route */}
+      <Route>
+        <MainLayout>
+          <NotFound />
+        </MainLayout>
+      </Route>
+    </Switch>
   );
 }
 
