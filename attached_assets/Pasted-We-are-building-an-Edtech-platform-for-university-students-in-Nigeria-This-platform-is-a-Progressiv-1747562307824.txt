@@ -1,0 +1,83 @@
+We are building an Edtech platform for university students in Nigeria. This platform is a Progressive Web App (PWA) designed with a modern, sleek UI and clean typography. The aim is to provide students with an engaging, interactive learning experience that promotes daily usage without relying on leaderboards or rewards/unlockable content. We want to use emotional design principles to encourage students to engage consistently and feel motivated.
+
+Core Requirements:
+Overall Design:
+
+Theme: The platform’s theme should primarily be green with shades of forest green, mint, and lime. Use these tones for accents, buttons, and navigation bars. This gives a fresh and calming feeling while symbolizing growth and learning.
+
+Typography: Use Satoshi or another clean, modern grotesque font (such as Roboto or Inter) for readability and clarity. The font should be used consistently across the platform for headings, body text, and buttons.
+
+Glassmorphism: Add glassmorphic effects where applicable (e.g., cards, modals, or section backgrounds). These should feature a frosted-glass look with background blur and rounded corners to create a modern, clean aesthetic.
+
+Example CSS for glassmorphism:
+
+css
+Copy
+.glass-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+}
+Grid-Based Layout (Bento Format):
+
+Implement a modular grid layout (using CSS Grid or Flexbox) to make the content easily responsive and visually balanced. Cards and sections should dynamically adjust based on screen size.
+
+Each section (e.g., "My Courses", "Assignments", "Profile", etc.) should be designed in cards that users can interact with. These cards should be sleek and easy to navigate with ample space between each element.
+
+Gamified Experience (without leaderboards and rewards):
+
+Points System: Award points for completing tasks like watching lessons, completing assignments, and engaging in discussions. Display points on the student’s profile page to indicate progress.
+
+Badges: Students will earn badges for completing significant milestones like "Top Performer of the Month", "Completed All Assignments", or "Peer Helper". Display badges on the student’s profile as a form of recognition and accomplishment.
+
+Progress Bars & Leveling Up: Show a progress bar for courses, assignments, and personal goals. Students can "level up" based on their progress, such as completing a set number of modules or achieving high grades. Leveling up should be accompanied by a visual celebration (e.g., animation, confetti).
+
+Microtasks & Daily Challenges: Introduce daily tasks like "Complete 5 quizzes today" and weekly challenges such as "Complete 3 lessons in a week". Use micro-incentives like points for these tasks, without unlocking content.
+
+Interactive Feedback and Emotional Engagement:
+
+Provide instant feedback on assignments, quizzes, and tasks (e.g., showing the percentage score with a progress bar). Use positive reinforcement language like "Great job!", "Keep it up!", and "You're doing amazing!" when students complete tasks.
+
+When students reach milestones, trigger celebration animations (e.g., confetti, balloons, or fireworks) to make them feel rewarded.
+
+Friendly Avatars: Allow students to create personalized avatars that evolve as they make progress. The avatars should reflect their academic progress (e.g., change outfits or accessories as they level up).
+
+Social Interaction & Collaboration:
+
+Students should be able to join study groups, collaborate on tasks, and give kudos (virtual high-fives) to peers who help them or complete difficult tasks.
+
+Peer Recognition: Students should be able to recognize each other for good work, helping to create a supportive community where students feel connected.
+
+Daily Usage Encouragement:
+
+Daily Login Bonus: Implement a daily login system where students are rewarded for logging in every day (e.g., points, extra tasks, or visual markers). This should encourage consistent engagement with the platform.
+
+Daily Microtasks: Provide small, easy-to-complete tasks that encourage users to return to the platform daily. These could be simple actions like "Join today's discussion" or "Complete the reading for the day".
+
+UI Elements & Interaction:
+
+Buttons: Ensure that all buttons are large and easily clickable, with hover and focus effects. Buttons should have a clean, minimalist design, with accent colors such as lime green for primary actions (e.g., "Start Lesson", "Submit Assignment").
+
+Navigation: Use a side navigation bar that includes the main sections: Dashboard, Courses, Assignments, Profile, etc. It should be collapsible and intuitive, making navigation smooth and effortless.
+
+Example for button hover effect:
+
+css
+Copy
+button:hover {
+  background-color: var(--accent-color);
+  transform: scale(1.05);
+}
+Mobile and Desktop Responsiveness:
+
+The platform must be fully responsive across mobile, tablet, and desktop devices. Use media queries to ensure that the layout adapts fluidly to different screen sizes, and ensure all interactions work seamlessly on touch devices.
+
+Data Visualization (Charts/Graphs):
+
+Include progress charts or graphs for students to see their performance over time. Use bar charts or line graphs for metrics like test scores, assignments completed, or time spent studying.
+
+Storytelling and Narrative Design:
+
+Create a storyline around students' academic journeys. As they progress through courses or modules, they should feel like they are leveling up on a personal academic journey, which could be framed as a "mission" or "quest" for mastering their field of study.

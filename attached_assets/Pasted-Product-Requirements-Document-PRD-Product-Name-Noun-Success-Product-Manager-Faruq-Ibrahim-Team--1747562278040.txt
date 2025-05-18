@@ -1,0 +1,455 @@
+Product Requirements Document (PRD)
+Product Name: Noun Success
+Product Manager: Faruq Ibrahim
+Team: Muheez Okunade, Faruq Ibrahim & Fawaz
+Date: May 2025
+Product Overview
+Noun Success is a mobile-first Progressive Web App (PWA) designed to empower students of the National Open University of Nigeria (NOUN) with tools for academic excellence, career growth, and peer engagement. The MVP will address common challenges faced by NOUN students—scattered study materials, isolation, lack of real-time support, and career disconnection—by offering a suite of connected features: exam prep, AI-powered guidance, job listings, and an active forum.
+Target Users
+- Undergraduate and postgraduate NOUN students
+- Part-time students balancing work and study
+- Recent graduates seeking jobs or further learning
+Goals and Objectives
+- Enable seamless preparation for E-exams and Pen-on-Paper (PoP) assessments
+- Offer AI-assisted support and study aids via GPT-4 Mini
+- Centralize access to course materials, news, and academic updates
+- Help students track learning, find jobs, and connect with peers
+- Provide a platform for annotations and collaborative study using Google Docs
+Key Features of the MVP
+1. E-Exam & Pen-on-Paper (PoP) Prep
+Objective: Help students prepare effectively for all assessment types.
+Key Components:
+- Randomized past questions categorized by course and exam type
+- Mock exams with a timer and realistic exam interface
+- Categorized notes and performance tracking
+- Downloadable summaries and PoP guides
+2. Summary Success (Read & Test Knowledge)
+Objective: Deliver quick, digestible knowledge that can be tested instantly.
+Key Components:
+- Summarized notes by topic and course
+- End-of-topic quizzes with feedback
+- Visual progress tracking and dashboard metrics
+3. Job Board (Find Your Next Successful Job)
+Objective: Connect students and alumni to real-world job opportunities.
+Key Components:
+- Filtered job postings (remote, internship, by faculty, location)
+- One-click application links
+- Tips for resume and cover letter building
+- Weekly job alerts and top picks
+4. Noun Success Forum
+Objective: Build a vibrant online campus community.
+Key Components:
+- FAQs grouped by semester, level, and faculty
+- News updates (strikes, timetables, registration, graduation)
+- Meet Course Mates groups with live discussion threads
+- Scholarship board and funding opportunities
+- Course material library (organized by course code and semester)
+5. AI Chat Experience (GPT-4 Mini)
+Objective: Provide real-time, personalized study help and NOUN-related support.
+Key Components:
+- GPT-4 Mini integrated chatbot
+- Natural language queries about course content, deadlines, exam tips
+- Available 24/7 with fallback suggestions and link-outs
+6. Noun Success Agent Dashboard
+Objective: Allow students to track usage and engagement across modules.
+Key Components:
+- Learning tracker (summaries read, quizzes taken)
+- Jobs applied for
+- Forum participation stats
+- AI chat activity history
+7. Google Docs + Annotation Engine
+Objective: Enable collaborative learning and content annotation.
+Key Components:
+- Students can open and annotate study docs
+- Save annotated versions and link them to their dashboard
+- AI-assisted summaries and note extraction
+8. Subscription Tiers
+Objective: Sustain the platform while offering free access to basic features.
+Tiers:
+- Free: Limited access to summaries, jobs, forum, and AI chat (5 prompts daily)
+- Premium: Full access to AI chat, all mock exams, job board filtering, downloadable content, and annotation engine
+Login Flow
+- Step 1: Signup using First Name, Gmail, Password, School, Referral Code (optional)
+- Step 2 (Optional Profile Update): Select Programme, Study Centre, Level, Technical Architecture
+- Platform: PWA (mobile-first)
+- Frontend: ReactJS / Next.js
+- Backend: Firebase/Supabase
+- Authentication: Firebase Auth (Email, phone, matric number)
+- Hosting: Firebase Hosting / Vercel
+- AI: GPT-4 Mini via OpenAI API
+- Database: Firestore/PostgreSQL
+- Integration: Google Docs API for annotations
+Success Metrics
+- 1,000+ signups within first 3 months
+- 75% users engage with 2+ features per session
+- 500+ mock exams completed monthly
+- 1,000+ forum posts in 90 days
+- 200+ job applications submitted
+Risks and Assumptions
+- Some users may not be tech-savvy or have consistent data access
+- High AI usage could increase costs
+- GPT-4 may occasionally provide outdated or inaccurate info
+- Students might prefer Telegram/WhatsApp for forum-like discussions
+Next Steps (Post-Meeting - 17th May)
+- Build MVP as PWA
+- Finalize and test login + onboarding system
+- Integrate GPT-4 Mini and set prompt limits
+- Define subscription structure and payment logic
+- Develop annotation module with Google Docs integration
+- Design and implement the Noun Success Agent Board (Dashboard)
+- Sketch user flow for all main features and test usability with target users
+- Estimate and track cloud & AI costs
+Appendix: Expected Monthly Cost Breakdown (Initial Phase)
+- Firebase Hosting & Auth: $25 - $40
+- Firestore/Supabase DB (5K users): $50 - $100
+- GPT-4 Mini API: $0.003 per 1K tokens (~$30/month at light usage)
+- Google Docs API: Free tier sufficient for MVP
+Total: ~$150 - $200/month depending on usage and AI query volume
+
+
+
+
+
+
+
+
+
+
+
+User Flow Diagram for Noun Success
+I. Onboarding & Authentication Flow
+User visits Noun Success PWA.
+Landing Page:
+Displays value proposition, key features.
+Options: "Sign Up" or "Log In".
+Sign Up Flow:
+User clicks "Sign Up".
+Screen 1: Create Account
+Input: First Name
+Input: Gmail
+Input: Password
+Input: Confirm Password
+Select school from dropdown  (National open university of Nigeria NOUN in a dropdown)
+Input: Referral Code (Optional)
+Action: Click "Sign Up" button.
+Validation: Check for required fields, valid email format, password strength, matching passwords.
+System: Create user account in Firebase Auth, store basic info in Firestore/PostgreSQL.
+Screen 2: Profile Update (Optional, can be prompted or skippable to access later via Dashboard/Settings)
+Prompt: "Help us personalize your experience."
+Input: Select Programme (Dropdown/Search)
+Input: Select Study Centre (Dropdown/Search)
+Input: Select Level (e.g., 100L, 200L, Masters Year 1) (Dropdown)
+Input: Select School/Faculty (Dropdown)
+Action: Click "Save Profile" or "Skip for Now".
+System: Update user profile in database.
+Redirection: To Main Dashboard/Home Screen.
+Log In Flow:
+User clicks "Log In".
+Screen: Log In
+Input: Gmail (or Matric Number, or Phone Number - as per PRD authentication options)
+Input: Password
+Option: "Forgot Password?"
+Action: Click "Log In" button.
+Validation: Check credentials against Firebase Auth.
+Successful Login: Redirect to Main Dashboard/Home Screen.
+Failed Login: Display error message (e.g., "Invalid credentials").
+
+Forgot Password Flow:
+User clicks "Forgot Password?" on Log In screen.
+Screen: Reset Password
+Input: Registered Email Address.
+Action: Click "Send Reset Link".
+System: Firebase Auth sends password reset email.
+User checks email, clicks reset link, and sets a new password.
+
+II. E-Exam & Pen-on-Paper (PoP) Prep Flow
+User navigates to "Exam Prep" from the Main Dashboard/Menu.
+Exam Prep Home Screen:
+Options: "E-Exams", "Pen-on-Paper (PoP) Exams".
+Maybe a quick view of recent activity or recommended courses.
+If User Selects "E-Exams" or "PoP Exams":
+Screen: Course Selection
+Display list of courses (filterable by level, faculty if profile is set).
+User selects a course.
+Screen: Course Exam Prep Options
+Option: "Practice Past Questions"
+Option: "Take Mock Exam"
+Option: "View Notes/Summaries" (links to Summary Success or specific PoP guides)
+Option: "View Performance"
+Practice Past Questions Flow:
+User clicks "Practice Past Questions".
+Screen: Past Questions Interface
+Display randomized past questions for the selected course and exam type.
+User answers questions.
+Feedback: Instant or after completing a set.
+Option: Filter by topic/year (if available).
+Mock Exam Flow:
+User clicks "Take Mock Exam".
+Screen: Mock Exam Setup
+Information: Number of questions, time limit.
+Action: "Start Mock Exam".
+Screen: Mock Exam Interface (Realistic)
+Timer displayed.
+Questions presented one by one or in a list.
+User selects answers.
+Action: "Submit Exam" (or auto-submit when timer ends).
+Screen: Mock Exam Results
+Score, correct/incorrect answers, explanations (if available).
+Performance tracked in "Categorized notes and performance tracking".
+View Notes/Summaries Flow:
+User clicks "View Notes/Summaries".
+Redirects to relevant section in "Summary Success" or displays downloadable PoP guides.
+View Performance Flow:
+User clicks "View Performance".
+Screen: Performance Dashboard (for Exam Prep)
+Displays scores from mock exams, practice question accuracy.
+Categorized by course.
+Progress charts.
+
+III. Summary Success (Read & Test Knowledge) Flow
+User navigates to "Summary Success" from Main Dashboard/Menu.
+Summary Success Home Screen:
+Option: Browse by course or topic.
+Search bar for topics/courses.
+Maybe a "Continue Reading" section.
+User selects a course/topic.
+Screen: Summarized Notes
+Display summarized notes for the selected topic/course.
+Navigation: Next/Previous topic.
+End-of-Topic Quiz:
+After reading a summary, prompt: "Test Your Knowledge?"
+User clicks "Start Quiz".
+Screen: Quiz Interface
+Display quiz questions for the topic.
+User submits answers.
+Screen: Quiz Results
+Score, feedback on answers.
+Option: "Review Summary" or "Next Topic".
+Visual Progress Tracking:
+Accessible from Summary Success home or main dashboard.
+Displays metrics: summaries read, quiz scores, topics completed.
+
+IV. Job Board Flow
+User navigates to "Job Board" from Main Dashboard/Menu.
+Job Board Home Screen:
+Display list of job postings.
+Filtering Options:
+Remote
+Internship
+By Faculty (if profile is set)
+Location
+Keyword search
+Option: "Resume/Cover Letter Tips".
+Option: Manage "Weekly Job Alerts".
+User views a job posting:
+Clicks on a job title.
+Screen: Job Details
+Full job description, requirements, company info.
+"One-click Application Link" (external link).
+Option: "Save Job" (if feature exists).
+Applying for a Job:
+User clicks "One-click Application Link".
+Redirected to the external job application site.
+Resume/Cover Letter Tips:
+User clicks "Resume/Cover Letter Tips".
+Displays articles, templates, or advice.
+Weekly Job Alerts:
+User can subscribe/unsubscribe or manage preferences (e.g., by faculty).
+
+V. Noun Success Forum Flow
+User navigates to "Forum" from Main Dashboard/Menu.
+Forum Home Screen:
+Tabs/Sections:
+FAQs (grouped by semester, level, faculty)
+News Updates (strikes, timetables, registration, graduation)
+Meet Course Mates (course groups)
+Scholarship Board
+Course Material Library
+FAQs:
+User selects category (semester, level, faculty).
+Views list of FAQs and their answers.
+News Updates:
+User views a chronological list of news items.
+Clicks on a news item to read details.
+Meet Course Mates:
+User browses or searches for course groups.
+Selects a course group.
+Screen: Course Group Page
+View live discussion threads.
+Create new thread.
+Reply to existing threads.
+Scholarship Board:
+User views list of scholarship/funding opportunities.
+Clicks for more details and application links.
+Course Material Library:
+User browses materials organized by course code and semester.
+Clicks to view or download (if downloadable).
+
+VI. AI Chat Experience (GPT-4 Mini) Flow
+User accesses AI Chat (e.g., via a persistent icon or from Menu).
+AI Chat Interface:
+Chat window.
+Input field: "Ask me anything about your studies or NOUN..."
+User types a natural language query.
+Action: Send message.
+System (GPT-4 Mini) processes query.
+AI Chat Interface displays response.
+If AI provides links or suggests further actions, these are displayed.
+Fallback suggestions if query is unclear or AI cannot answer.
+Usage Limits (for Free Tier):
+If daily prompt limit (2 prompts) is reached, display message: "You've reached your daily free limit. Upgrade to Premium for unlimited access."
+
+VII. Noun Success Agent Dashboard Flow
+User navigates to "Agent Dashboard" from Main Menu or Profile section.
+Agent Dashboard Home Screen:
+Welcome message: “Track your referrals, earnings, and performance.”
+Sections:
+Your Promo Code
+Display user’s unique referral/promo code (e.g., NS-FARUQ17).
+Option to copy/share promo code.
+Button: “Share Code via WhatsApp / Telegram / X (Twitter).”
+Referral Summary Overview
+Total Users Referred: e.g., 13
+Total Signups from Code: e.g., 10
+Total Paying Users via Code: e.g., 6
+Your Earnings: e.g., ₦12,000
+Earnings Breakdown
+Table or list view:
+▪	Referred User
+▪	Date Joined
+▪	Subscription Tier
+▪	Commission Earned
+▪	Tobi F.
+▪	May 20, 2025
+▪	Premium (₦2,000)
+▪	₦500
+▪	Sarah K.
+▪	May 22, 2025
+▪	Free Tier
+▪	₦0
+▪	Fola D.
+▪	May 23, 2025
+▪	Premium (₦2,000)
+▪	₦500
+
+	▪	
+
+
+
+Download CSV or view full history.
+Performance Graph
+Bar chart or line graph showing weekly/monthly referrals and earnings growth.
+Commission Payout Status
+Last Paid: May 15, 2025
+Next Payout: June 15, 2025
+Minimum Threshold for Withdrawal: ₦5,000
+Payout Method: Bank Transfer (Can edit)
+Referral Resources Section:
+Downloadable flyers or social media creatives.
+Link to “How to Promote Noun Success” video or guide.
+Referral FAQ:
+“How do I earn commissions?”
+“When do I get paid?”
+“Can I change my promo code?”
+“What’s the minimum withdrawal amount?”
+
+
+VIII. Google Docs + Annotation Engine Flow (Premium Feature)
+User is in a relevant section (e.g., viewing Course Materials, their own uploaded documents).
+Option: "Open in Annotation Engine" or "Annotate Document".
+Annotation Interface (integrated with Google Docs API view or a custom view):
+Document displayed.
+Annotation tools.
+User makes annotations.
+Saving Annotations:
+Option: "Save Annotated Version".
+System: Saves the annotated version and links it to the user's dashboard/account.
+AI-Assisted Summaries/Note Extraction (within Annotation Engine):
+Option: "AI Summarize" or "Extract Key Notes".
+AI processes and provides summary/extracted notes.
+
+IX. Subscription Tier Flow
+Accessing Premium Features (as a Free User):
+User attempts to access a premium feature.
+System Prompt: Upgrade to Premium
+Display benefits of Premium.
+Show pricing.
+Button: "Upgrade Now".
+Upgrade Process:
+User clicks "Upgrade Now".
+Screen: Subscription Plan Selection
+Screen: Payment Details
+Confirmation: Payment successful, account upgraded.
+Unlock premium features.
+Managing Subscription (from Dashboard/Settings):
+View current plan.
+Option to cancel subscription.
+View billing history.
+. Noun Success Admin Dashboard Flow (Master Control Panel)
+Admin logs in via separate admin portal.
+Input: Email and Admin Password
+2FA enabled for security (e.g., via OTP or Authenticator App)
+Successful login redirects to Admin Dashboard Home
+Admin Dashboard Home Screen:
+Overview Widgets:
+Total Users: 12,000+
+Active Subscriptions: 2,300
+Total Referrals: 4,500
+Total Earnings: ₦4.2M
+Server Health: OK / Issues
+AI API Usage: 76% this month
+User Management Module:
+Search and manage users (by name, email, referral code)
+View profile, subscription status, referral history
+Deactivate, suspend, or flag accounts
+Referral Program Control:
+View all agents and their performance
+Edit referral commission structure (e.g., ₦2,000 per paying user)
+Approve/flag suspicious referral activity
+Export data for finance or audits
+Subscription & Payment Settings:
+Set pricing tiers
+View subscription analytics
+Handle failed payments or refund requests
+Integration with payment gateway dashboard (e.g., Paystack, Flutterwave)
+Content Management:
+Upload or update:
+Exam prep materials
+Summary notes
+Forum topics
+Job listings
+Control visibility of content by level, faculty, course
+AI Assistant Settings:
+Set GPT usage limits for free/premium tiers
+Review user queries and feedback
+Update AI prompt logic or categories (if needed)
+Forum Moderation:
+Flagged posts/reports
+Manage moderators and admin users
+Approve/disapprove scholarship and news posts
+Reports & Analytics:
+Download monthly reports on:
+User growth
+AI interaction trends
+Referral earnings
+Engagement metrics (quiz, mock exams)
+Job board usage
+System Logs & Monitoring:
+Error logs
+Usage logs
+API call history
+Notification logs (email/SMS)
+Notifications & Updates:
+Push system-wide announcements
+Schedule release notes or feature alerts
+Manage in-app banners
+Security & Backup Settings:
+View and set admin roles
+Set up periodic database backups
+Enable audit trails for critical actions
+
+
+
+
+
+
