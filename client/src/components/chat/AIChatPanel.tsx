@@ -16,14 +16,22 @@ interface AIChatPanelProps {
 const AIChatPanel: React.FC<AIChatPanelProps> = ({ isOpen, onClose }) => {
   const [prompt, setPrompt] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { messages, promptsUsed, promptLimit, isLoading, sendMessage } = useAIChat();
+  // Using state to manage chat messages directly in the component instead of via the hook
+  const [chatMessages, setChatMessages] = useState<any[]>([{
+    id: "welcome-message",
+    content: "Hi there! I'm your AI study assistant. How can I help you today? You can ask me about your courses, exams, or any academic questions you have.",
+    isUserMessage: false,
+    createdAt: new Date().toISOString()
+  }]);
+  const promptsUsed = 0;
+  const promptLimit = 5;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [chatMessages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,22 +48,41 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ isOpen, onClose }) => {
         createdAt: new Date().toISOString()
       };
       
-      // Add to chat messages directly even without authentication
-      messages.push(userMessage);
+      // Add user message to chat
+      setChatMessages(prev => [...prev, userMessage]);
+      
+      // Store prompt to respond to
+      const userPrompt = prompt;
+      
+      // Clear input field
+      setPrompt('');
       
       // For demo purposes, simulate an AI response
       setTimeout(() => {
+        let responseContent = '';
+        
+        // Generate different responses based on user input
+        if (userPrompt.toLowerCase().includes('exam') || userPrompt.toLowerCase().includes('test')) {
+          responseContent = "I can help with exam preparation! NOUN typically offers both E-exams and Pen-on-Paper (PoP) exams. To prepare effectively, you should review past questions, complete the practice tests in your TMA, and join study groups with other students. Is there a specific course exam you're preparing for?";
+        } else if (userPrompt.toLowerCase().includes('course') || userPrompt.toLowerCase().includes('material')) {
+          responseContent = "NOUN offers various courses across different faculties. Each course typically comes with study materials, TMAs (Tutor-Marked Assignments), and sometimes video lectures. You can access these materials through the NOUN portal or in your Study Centre. Would you like information about a specific course?";
+        } else if (userPrompt.toLowerCase().includes('deadline') || userPrompt.toLowerCase().includes('date')) {
+          responseContent = "Important NOUN deadlines include registration periods, TMA submission dates, and exam schedules. These are usually announced on the NOUN portal and through circulars at Study Centres. It's always good to check regularly for any updates.";
+        } else {
+          responseContent = "Thank you for your question! As a demo AI assistant, I can provide information about NOUN courses, exam preparation, study techniques, and academic guidance. Once you create an account, I'll be able to offer more personalized assistance tailored to your specific courses and academic journey.";
+        }
+        
         const aiResponse = {
           id: Math.random().toString(),
-          content: "As a demo AI, I can't access the authentication system yet. Once you log in, I'll be able to provide personalized assistance with your NOUN studies. Would you like to create an account or log in?",
+          content: responseContent,
           isUserMessage: false,
           createdAt: new Date().toISOString()
         };
-        messages.push(aiResponse);
+        
+        setChatMessages(prev => [...prev, aiResponse]);
         setIsSubmitting(false);
       }, 1500);
       
-      setPrompt('');
     } catch (error) {
       if (error instanceof Error) {
         toast({
@@ -93,7 +120,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ isOpen, onClose }) => {
           className="flex-grow overflow-y-auto p-4 bg-gray-50" 
           style={{ height: 'calc(100vh - 140px)' }}
         >
-          {isLoading ? (
+          {isSubmitting ? (
             <div className="space-y-4">
               <Skeleton className="h-20 w-3/4 rounded-lg" />
               <div className="flex justify-end">
@@ -101,9 +128,9 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ isOpen, onClose }) => {
               </div>
               <Skeleton className="h-32 w-3/4 rounded-lg" />
             </div>
-          ) : messages.length > 0 ? (
+          ) : chatMessages.length > 0 ? (
             <div className="space-y-4">
-              {messages.map((message) => (
+              {chatMessages.map((message) => (
                 <ChatMessage 
                   key={message.id}
                   content={message.content}
