@@ -36,28 +36,31 @@ const Sidebar: React.FC<SidebarProps> = ({ onAIChatOpen }) => {
       
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.path}>
-              <Link href={item.path}>
-                <a 
-                  className={`flex items-center px-4 py-3 text-sm ${
-                    (item.path === '/' && location === '/') || 
-                    (item.path !== '/' && location.startsWith(item.path))
-                      ? 'text-forest-800 bg-mint-50 font-medium'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <item.icon className={`h-5 w-5 mr-3 ${
-                    (item.path === '/' && location === '/') || 
-                    (item.path !== '/' && location.startsWith(item.path))
-                      ? 'text-forest-600'
-                      : 'text-gray-500'
-                  }`} />
-                  {item.label}
-                </a>
-              </Link>
-            </li>
-          ))}
+          {navItems.map((item) => {
+            const isActive = (item.path === '/' && location === '/') || 
+              (item.path !== '/' && location.startsWith(item.path));
+            const linkClass = `flex items-center px-4 py-3 text-sm ${
+              isActive
+                ? 'text-forest-800 bg-mint-50 font-medium'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`;
+            const iconClass = `h-5 w-5 mr-3 ${
+              isActive
+                ? 'text-forest-600'
+                : 'text-gray-500'
+            }`;
+            
+            return (
+              <li key={item.path}>
+                <Link href={item.path}>
+                  <div className={linkClass}>
+                    <item.icon className={iconClass} />
+                    {item.label}
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
           <li>
             <button
               onClick={onAIChatOpen}
@@ -73,14 +76,14 @@ const Sidebar: React.FC<SidebarProps> = ({ onAIChatOpen }) => {
       <div className="p-4 border-t">
         <div className="flex justify-between">
           <Link href="/help">
-            <a className="text-gray-500 hover:text-forest-600 p-2">
+            <div className="text-gray-500 hover:text-forest-600 p-2 cursor-pointer">
               <HelpCircle className="h-5 w-5" />
-            </a>
+            </div>
           </Link>
           <Link href="/settings">
-            <a className="text-gray-500 hover:text-forest-600 p-2">
+            <div className="text-gray-500 hover:text-forest-600 p-2 cursor-pointer">
               <Settings className="h-5 w-5" />
-            </a>
+            </div>
           </Link>
         </div>
       </div>

@@ -95,7 +95,7 @@ const RecentProgress: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-forest-800">Your Recent Progress</h2>
         <Link href="/profile">
-          <a className="text-forest-600 text-sm hover:text-forest-800 font-medium">View All</a>
+          <div className="text-forest-600 text-sm hover:text-forest-800 font-medium cursor-pointer">View All</div>
         </Link>
       </div>
       
@@ -115,9 +115,9 @@ const RecentProgress: React.FC = () => {
         <div className="bg-gray-50 p-6 rounded-lg text-center">
           <p className="text-gray-600">You haven't made any progress yet. Start learning to see your progress here!</p>
           <Link href="/exam-prep">
-            <a className="mt-4 inline-block text-forest-600 hover:text-forest-800 font-medium">
+            <div className="mt-4 inline-block text-forest-600 hover:text-forest-800 font-medium cursor-pointer">
               Start with Exam Prep
-            </a>
+            </div>
           </Link>
         </div>
       )}

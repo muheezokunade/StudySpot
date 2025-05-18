@@ -102,7 +102,7 @@ const UpcomingExams: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-forest-800">Upcoming Exams</h2>
         <Link href="/exam-prep">
-          <a className="text-forest-600 text-sm hover:text-forest-800 font-medium">View All</a>
+          <div className="text-forest-600 text-sm hover:text-forest-800 font-medium cursor-pointer">View All</div>
         </Link>
       </div>
       
@@ -124,12 +124,12 @@ const UpcomingExams: React.FC = () => {
                 <p className="text-sm text-gray-500 mt-1">{exam.title}</p>
                 <div className="flex items-center mt-3">
                   <Link href={`/exam-prep/${exam.courseId}`}>
-                    <a className="text-sm bg-forest-50 text-forest-700 px-3 py-1 rounded-md hover:bg-forest-100 transition">
+                    <div className="text-sm bg-forest-50 text-forest-700 px-3 py-1 rounded-md hover:bg-forest-100 transition cursor-pointer inline-flex">
                       <span className="flex items-center">
                         <BookOpen className="h-4 w-4 mr-1" />
                         Study
                       </span>
-                    </a>
+                    </div>
                   </Link>
                 </div>
               </div>
@@ -140,9 +140,9 @@ const UpcomingExams: React.FC = () => {
         <div className="bg-gray-50 p-6 rounded-lg text-center">
           <p className="text-gray-600">No upcoming exams scheduled at the moment.</p>
           <Link href="/exam-prep">
-            <a className="mt-4 inline-block text-forest-600 hover:text-forest-800 font-medium">
+            <div className="mt-4 inline-block text-forest-600 hover:text-forest-800 font-medium cursor-pointer">
               Browse Exam Prep Materials
-            </a>
+            </div>
           </Link>
         </div>
       )}

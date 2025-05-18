@@ -13,22 +13,22 @@ const Footer: React.FC = () => {
         </div>
         <div className="flex space-x-6">
           <Link href="/forum">
-            <a className="text-gray-500 hover:text-forest-600">
+            <div className="text-gray-500 hover:text-forest-600 cursor-pointer">
               <span className="sr-only">Forum</span>
               <MessageSquare className="h-5 w-5" />
-            </a>
+            </div>
           </Link>
           <Link href="/help">
-            <a className="text-gray-500 hover:text-forest-600">
+            <div className="text-gray-500 hover:text-forest-600 cursor-pointer">
               <span className="sr-only">Help</span>
               <HelpCircle className="h-5 w-5" />
-            </a>
+            </div>
           </Link>
           <Link href="/settings">
-            <a className="text-gray-500 hover:text-forest-600">
+            <div className="text-gray-500 hover:text-forest-600 cursor-pointer">
               <span className="sr-only">Settings</span>
               <Settings className="h-5 w-5" />
-            </a>
+            </div>
           </Link>
         </div>
       </div>
