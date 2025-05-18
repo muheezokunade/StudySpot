@@ -54,30 +54,20 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuOpen, onAIChatOpen }) => {
           </div>
 
           <div className="hidden sm:flex items-center space-x-4">
-            <Link href="/">
-              <a className={location === '/' ? 'text-forest-800 hover:text-forest-600' : 'text-gray-600 hover:text-forest-600'}>
+            <Link href="/" className={location === '/' ? 'text-forest-800 hover:text-forest-600' : 'text-gray-600 hover:text-forest-600'}>
                 Dashboard
-              </a>
             </Link>
-            <Link href="/exam-prep">
-              <a className={location.startsWith('/exam-prep') ? 'text-forest-800 hover:text-forest-600' : 'text-gray-600 hover:text-forest-600'}>
+            <Link href="/exam-prep" className={location.startsWith('/exam-prep') ? 'text-forest-800 hover:text-forest-600' : 'text-gray-600 hover:text-forest-600'}>
                 E-Exam Prep
-              </a>
             </Link>
-            <Link href="/summary">
-              <a className={location.startsWith('/summary') ? 'text-forest-800 hover:text-forest-600' : 'text-gray-600 hover:text-forest-600'}>
+            <Link href="/summary" className={location.startsWith('/summary') ? 'text-forest-800 hover:text-forest-600' : 'text-gray-600 hover:text-forest-600'}>
                 Summary
-              </a>
             </Link>
-            <Link href="/jobs">
-              <a className={location.startsWith('/jobs') ? 'text-forest-800 hover:text-forest-600' : 'text-gray-600 hover:text-forest-600'}>
+            <Link href="/jobs" className={location.startsWith('/jobs') ? 'text-forest-800 hover:text-forest-600' : 'text-gray-600 hover:text-forest-600'}>
                 Jobs
-              </a>
             </Link>
-            <Link href="/forum">
-              <a className={location.startsWith('/forum') ? 'text-forest-800 hover:text-forest-600' : 'text-gray-600 hover:text-forest-600'}>
+            <Link href="/forum" className={location.startsWith('/forum') ? 'text-forest-800 hover:text-forest-600' : 'text-gray-600 hover:text-forest-600'}>
                 Forum
-              </a>
             </Link>
           </div>
 

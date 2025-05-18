@@ -1,0 +1,49 @@
+Warning: validateDOMNesting(...): <a> cannot appear as a descendant of &lt;a&gt;.
+    at a
+    at a
+    at https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=bf9469c1:337:18
+    at div
+    at div
+    at header
+    at Header (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/components/layout/Header.tsx:32:19)
+    at div
+    at MainLayout (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/components/layout/MainLayout.tsx?t=1747570851151:24:23)
+    at Router
+    at Provider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PLT6GTVM.js?v=bf9469c1:38:15)
+    at TooltipProvider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=bf9469c1:60:5)
+    at AuthProvider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/context/AuthContext.tsx:21:32)
+    at QueryClientProvider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=bf9469c1:2805:3)
+    at App
+Warning: Invalid prop &#x60;data-replit-metadata&#x60; supplied to &#x60;React.Fragment&#x60;. React.Fragment can only have &#x60;key&#x60; and &#x60;children&#x60; props.
+    at ChatMessage (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/components/chat/ChatMessage.tsx:19:24)
+    at div
+    at div
+    at div
+    at div
+    at AIChatPanel (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/components/chat/AIChatPanel.tsx?t=1747570851151:26:24)
+    at div
+    at MainLayout (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/components/layout/MainLayout.tsx?t=1747570851151:24:23)
+    at Router
+    at Provider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PLT6GTVM.js?v=bf9469c1:38:15)
+    at TooltipProvider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=bf9469c1:60:5)
+    at AuthProvider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/context/AuthContext.tsx:21:32)
+    at QueryClientProvider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=bf9469c1:2805:3)
+    at App
+at ChatMessage (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/components/chat/ChatMessage.tsx:19:24)
+at div
+at div
+at div
+at div
+at AIChatPanel (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/components/chat/AIChatPanel.tsx?t=1747570851151:26:24)
+at div
+at MainLayout (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/components/layout/MainLayout.tsx?t=1747570851151:24:23)
+at Router
+at Provider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PLT6GTVM.js?v=bf9469c1:38:15)
+at TooltipProvider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=bf9469c1:60:5)
+at AuthProvider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/src/context/AuthContext.tsx:21:32)
+at QueryClientProvider (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=bf9469c1:2805:3)
+at App
+at t.value (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://c819d10b-23cd-455f-8c87-db1bf7b77fd5-00-2qtzvnq2ra8ah.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

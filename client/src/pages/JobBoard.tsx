@@ -126,7 +126,7 @@ const JobBoard: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="">All Locations</SelectItem>
+                  <SelectItem value="all_locations">All Locations</SelectItem>
                   <SelectItem value="remote">Remote</SelectItem>
                   <SelectItem value="lagos">Lagos</SelectItem>
                   <SelectItem value="abuja">Abuja</SelectItem>
@@ -142,7 +142,7 @@ const JobBoard: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="all_types">All Types</SelectItem>
                   <SelectItem value="full-time">Full-time</SelectItem>
                   <SelectItem value="part-time">Part-time</SelectItem>
                   <SelectItem value="internship">Internship</SelectItem>
@@ -159,7 +159,7 @@ const JobBoard: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="">All Faculties</SelectItem>
+                  <SelectItem value="all_faculties">All Faculties</SelectItem>
                   {faculties.map(fac => (
                     <SelectItem key={fac} value={fac.toLowerCase()}>
                       {fac}
