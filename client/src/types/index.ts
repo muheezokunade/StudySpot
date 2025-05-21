@@ -7,6 +7,7 @@ export interface User {
   studyCenter?: string;
   level?: string;
   referralCode?: string;
+  role?: string;
 }
 
 export interface Course {
@@ -17,6 +18,26 @@ export interface Course {
   level?: string;
   faculty?: string;
   semester?: string;
+}
+
+export interface CourseEnrollment {
+  id: number;
+  userId: number;
+  courseId: number;
+  enrolledAt: string;
+  isActive: boolean;
+  course?: Course;
+}
+
+export interface ExamTimetable {
+  id: number;
+  userId: number;
+  courseId: number;
+  examDate: string;
+  location?: string;
+  notes?: string;
+  createdAt: string;
+  course?: Course;
 }
 
 export interface CourseMaterial {

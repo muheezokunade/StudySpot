@@ -1,0 +1,20 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": "1719176390502",
+      "tag": "0000_white_titania",
+      "breakpoints": false
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": "1719176391502",
+      "tag": "0001_add_course_enrollments",
+      "breakpoints": false
+    }
+  ]
+}

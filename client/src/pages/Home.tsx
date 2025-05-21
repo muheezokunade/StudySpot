@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import WelcomeBanner from '@/components/dashboard/WelcomeBanner';
 import RecentProgress from '@/components/dashboard/RecentProgress';
@@ -8,9 +8,11 @@ import ForumHighlights from '@/components/dashboard/ForumHighlights';
 import JobOpportunities from '@/components/dashboard/JobOpportunities';
 import { Exam, Course } from '@/types';
 
-const Home: React.FC = () => {
-  const [aiChatOpen, setAiChatOpen] = useState(false);
+interface HomeProps {
+  onAIChatOpen: () => void;
+}
 
+const Home: React.FC<HomeProps> = ({ onAIChatOpen }) => {
   const { data: examsData } = useQuery({
     queryKey: ['/api/exams'],
   });
@@ -18,10 +20,6 @@ const Home: React.FC = () => {
   const { data: coursesData } = useQuery({
     queryKey: ['/api/courses'],
   });
-
-  const handleAIChatOpen = () => {
-    setAiChatOpen(true);
-  };
 
   // Get nearest upcoming exam
   const getUpcomingExam = (exams: Exam[], courses: Course[]) => {
@@ -53,7 +51,7 @@ const Home: React.FC = () => {
 
   return (
     <>
-      <WelcomeBanner upcomingExam={upcomingExam} onAIChatOpen={handleAIChatOpen} />
+      <WelcomeBanner upcomingExam={upcomingExam} onAIChatOpen={onAIChatOpen} />
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <RecentProgress />

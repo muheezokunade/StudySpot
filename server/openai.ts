@@ -1,11 +1,18 @@
-import OpenAI from "openai";
+import { OpenAI } from 'openai';
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const OPENAI_MODEL = "gpt-4o";
+// Use a placeholder key for development if real key is not available
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'placeholder-key-for-development';
 
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-development"
+// Set OpenAI model to use
+const OPENAI_MODEL = 'gpt-4o'; // Change this to a model you have access to
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY,
 });
+
+// Check if we have a valid API key
+const hasValidApiKey = OPENAI_API_KEY !== 'placeholder-key-for-development';
 
 type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -13,8 +20,14 @@ type ChatMessage = {
 };
 
 export async function generateAIResponse(prompt: string, context?: string): Promise<string> {
+  // If no valid API key, return a helpful message
+  if (!hasValidApiKey) {
+    console.warn('No OpenAI API key provided. Using fallback response.');
+    return "I'm sorry, but the AI service is not configured properly. Please add an OpenAI API key to the .env file to enable this feature.";
+  }
+
   try {
-    const messages: ChatMessage[] = [];
+    const messages: { role: 'system' | 'user'; content: string }[] = [];
     
     // Add system context if provided
     if (context) {
@@ -26,7 +39,7 @@ export async function generateAIResponse(prompt: string, context?: string): Prom
       // Default system context for NOUN students
       messages.push({
         role: "system",
-        content: "You are an AI tutor for National Open University of Nigeria (NOUN) students. You provide helpful, accurate, and concise information about courses, exams, and academic concepts. When asked about specific NOUN courses, assume standard university curriculum for those courses. You can suggest study techniques, explain concepts, and help with exam preparation. Keep your responses clear, educational, and supportive."
+        content: "You are an advanced AI tutor specializing in National Open University of Nigeria (NOUN) courses. You provide detailed, accurate, and insightful responses about academic subjects, course materials, exam preparation, and learning strategies. When discussing NOUN courses, incorporate specific curriculum details when available. Your expertise covers Mathematics, Computer Science, Business Administration, Law, Education, and other programs offered by NOUN. Provide practical examples, study techniques, and clear explanations. Be encouraging, helpful, and tailored to the Nigerian educational context. When asked about computer science topics, provide thorough technical explanations with code examples when appropriate."
       });
     }
     

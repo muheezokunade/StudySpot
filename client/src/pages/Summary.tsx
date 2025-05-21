@@ -7,7 +7,8 @@ import {
   FileText, 
   Clock, 
   CheckCircle,
-  BarChart3
+  BarChart3,
+  PlusCircle
 } from 'lucide-react';
 import { Course, CourseMaterial } from '@/types';
 import { Input } from '@/components/ui/input';
@@ -21,21 +22,41 @@ import {
 } from "@/components/ui/card";
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuthContext } from '@/context/AuthContext';
+
+interface CoursesResponse {
+  courses: Course[];
+}
+
+interface MaterialsResponse {
+  materials: CourseMaterial[];
+}
+
+interface ProgressItem {
+  courseId: number;
+  materialId?: number;
+  completed: boolean;
+}
+
+interface ProgressResponse {
+  progress: ProgressItem[];
+}
 
 const Summary: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const { user } = useAuthContext();
   
   // Get courses and materials
-  const { data: coursesData, isLoading: isCoursesLoading } = useQuery({
+  const { data: coursesData, isLoading: isCoursesLoading } = useQuery<CoursesResponse>({
     queryKey: ['/api/courses'],
   });
 
-  const { data: materialsData, isLoading: isMaterialsLoading } = useQuery({
+  const { data: materialsData, isLoading: isMaterialsLoading } = useQuery<MaterialsResponse>({
     queryKey: ['/api/materials'],
   });
 
   // Get user progress
-  const { data: progressData, isLoading: isProgressLoading } = useQuery({
+  const { data: progressData, isLoading: isProgressLoading } = useQuery<ProgressResponse>({
     queryKey: ['/api/progress'],
   });
 
@@ -45,7 +66,7 @@ const Summary: React.FC = () => {
   const getFilteredCourses = () => {
     if (!coursesData?.courses) return [];
     
-    return coursesData.courses.filter(course => 
+    return coursesData.courses.filter((course: Course) => 
       course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -55,7 +76,7 @@ const Summary: React.FC = () => {
   const getMaterialsForCourse = (courseId: number) => {
     if (!materialsData?.materials) return [];
     
-    return materialsData.materials.filter(material => 
+    return materialsData.materials.filter((material: CourseMaterial) => 
       material.courseId === courseId
     );
   };
@@ -67,7 +88,7 @@ const Summary: React.FC = () => {
     const courseMaterials = getMaterialsForCourse(courseId);
     if (courseMaterials.length === 0) return 0;
     
-    const completedMaterials = progressData.progress.filter(p => 
+    const completedMaterials = progressData.progress.filter((p: ProgressItem) => 
       p.courseId === courseId && 
       p.materialId && 
       p.completed
@@ -95,8 +116,19 @@ const Summary: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="glass-card p-6 mb-8">
-        <h1 className="text-2xl font-bold text-forest-800 mb-2">Summary Success</h1>
-        <p className="text-gray-600">Read summarized notes and test your knowledge with quizzes</p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-forest-800 mb-2">Summary Success</h1>
+            <p className="text-gray-600">Read summarized notes and test your knowledge with quizzes</p>
+          </div>
+          
+          <Link href="/summary/new">
+            <Button className="mt-4 sm:mt-0 bg-forest-600 hover:bg-forest-700">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Summary
+            </Button>
+          </Link>
+        </div>
         
         <div className="mt-6 relative">
           <Input
@@ -130,7 +162,7 @@ const Summary: React.FC = () => {
       ) : (
         <div className="space-y-8">
           {filteredCourses.length > 0 ? (
-            filteredCourses.map(course => {
+            filteredCourses.map((course: Course) => {
               const materials = getMaterialsForCourse(course.id);
               const progress = getCourseProgress(course.id);
               
@@ -149,7 +181,7 @@ const Summary: React.FC = () => {
                   
                   {materials.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {materials.map(material => (
+                      {materials.map((material: CourseMaterial) => (
                         <Card key={material.id} className="overflow-hidden hover:shadow-md transition-shadow">
                           <CardHeader className="pb-2">
                             <div className="flex justify-between items-start">
@@ -206,23 +238,14 @@ const Summary: React.FC = () => {
               );
             })
           ) : (
-            <div className="glass-card p-6 text-center">
-              <h2 className="text-xl font-semibold text-forest-800 mb-4">No Courses Found</h2>
-              <p className="text-gray-600 mb-4">
-                {searchTerm 
-                  ? `No courses match "${searchTerm}". Try a different search term.` 
-                  : "No courses are available at the moment."}
-              </p>
-              
-              {searchTerm && (
-                <Button
-                  variant="outline"
-                  onClick={() => setSearchTerm('')}
-                  className="text-forest-600 border-forest-600 hover:bg-forest-50"
-                >
-                  Clear Search
+            <div className="glass-card p-8 text-center">
+              <h3 className="text-xl font-medium text-gray-700 mb-4">No Courses Found</h3>
+              <p className="text-gray-600 mb-6">No courses are available at the moment.</p>
+              <Link href="/summary/new">
+                <Button className="bg-forest-600 hover:bg-forest-700">
+                  Create Summary
                 </Button>
-              )}
+              </Link>
             </div>
           )}
         </div>

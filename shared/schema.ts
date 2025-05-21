@@ -1,10 +1,10 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer, blob } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Users schema
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   firstName: text("first_name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
@@ -14,8 +14,9 @@ export const users = pgTable("users", {
   level: text("level"),
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),
-  isVerified: boolean("is_verified").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+  isVerified: integer("is_verified", { mode: "boolean" }).default(false),
+  role: text("role").default("user"),
+  createdAt: text("created_at").default(new Date().toISOString()),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -24,9 +25,107 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
 });
 
+// Documents schema (for uploaded learning materials)
+export const documents = sqliteTable("documents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  title: text("title").notNull(),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(), // PDF, DOCX, etc.
+  filePath: text("file_path").notNull(),
+  fileSize: integer("file_size").notNull(),
+  pageCount: integer("page_count"),
+  status: text("status").default("processing"), // processing, indexed, failed
+  processingError: text("processing_error"),
+  createdAt: text("created_at").default(new Date().toISOString()),
+});
+
+export const insertDocumentSchema = createInsertSchema(documents).omit({
+  id: true,
+  status: true,
+  processingError: true,
+  createdAt: true,
+});
+
+// Document Chunks schema (text chunks for embedding)
+export const documentChunks = sqliteTable("document_chunks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  documentId: integer("document_id").notNull(),
+  content: text("content").notNull(),
+  pageNumber: integer("page_number"),
+  chunkIndex: integer("chunk_index").notNull(),
+  embedding: text("embedding"), // vector embedding as string (will be parsed by app)
+  createdAt: text("created_at").default(new Date().toISOString()),
+});
+
+export const insertDocumentChunkSchema = createInsertSchema(documentChunks).omit({
+  id: true,
+  embedding: true,
+  createdAt: true,
+});
+
+// Concepts schema (extracted educational concepts)
+export const concepts = sqliteTable("concepts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  documentId: integer("document_id").notNull(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull(),
+  prerequisites: blob("prerequisites"), // Array of prerequisite concept IDs
+  orderIndex: integer("order_index").notNull(), // For ordering concepts in the learning path
+  pageSpan: text("page_span"), // e.g., "10-15" for references
+  createdAt: text("created_at").default(new Date().toISOString()),
+});
+
+export const insertConceptSchema = createInsertSchema(concepts).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Exercises schema (practice questions for concepts)
+export const exercises = sqliteTable("exercises", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  conceptId: integer("concept_id").notNull(),
+  question: text("question").notNull(),
+  type: text("type").notNull(), // MCQ, short_answer
+  options: blob("options"), // For MCQ
+  correctAnswer: text("correct_answer").notNull(),
+  hint1: text("hint_1"),
+  hint2: text("hint_2"),
+  solution: text("solution").notNull(),
+  memoryHook: text("memory_hook"), // Mnemonic or analogy
+  createdAt: text("created_at").default(new Date().toISOString()),
+});
+
+export const insertExerciseSchema = createInsertSchema(exercises).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Spaced Repetition Stats schema (for scheduling concept reviews)
+export const spacedRepetitionStats = sqliteTable("spaced_repetition_stats", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  conceptId: integer("concept_id").notNull(),
+  easeFactor: integer("ease_factor").default(250), // SuperMemo2 algorithm values
+  interval: integer("interval").default(1), // Days
+  nextReviewDate: text("next_review_date").notNull(),
+  attempts: integer("attempts").default(0),
+  correctAttempts: integer("correct_attempts").default(0),
+  lastReviewedAt: text("last_reviewed_at").default(new Date().toISOString()),
+});
+
+export const insertSpacedRepetitionStatsSchema = createInsertSchema(spacedRepetitionStats).omit({
+  id: true,
+  easeFactor: true,
+  interval: true,
+  attempts: true,
+  correctAttempts: true,
+  lastReviewedAt: true,
+});
+
 // Courses schema
-export const courses = pgTable("courses", {
-  id: serial("id").primaryKey(),
+export const courses = sqliteTable("courses", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   code: text("code").notNull(),
   title: text("title").notNull(),
   description: text("description"),
@@ -39,9 +138,23 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
   id: true,
 });
 
+// Course Enrollments schema
+export const courseEnrollments = sqliteTable("course_enrollments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  courseId: integer("course_id").notNull(),
+  enrolledAt: text("enrolled_at").default(new Date().toISOString()),
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+});
+
+export const insertCourseEnrollmentSchema = createInsertSchema(courseEnrollments).omit({
+  id: true,
+  enrolledAt: true,
+});
+
 // Course Materials schema
-export const courseMaterials = pgTable("course_materials", {
-  id: serial("id").primaryKey(),
+export const courseMaterials = sqliteTable("course_materials", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   courseId: integer("course_id").notNull(),
   title: text("title").notNull(),
   type: text("type").notNull(), // PDF, Video, Quiz
@@ -50,7 +163,7 @@ export const courseMaterials = pgTable("course_materials", {
   duration: text("duration"),
   pages: integer("pages"),
   questions: integer("questions"),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: text("created_at").default(new Date().toISOString()),
 });
 
 export const insertCourseMaterialSchema = createInsertSchema(courseMaterials).omit({
@@ -59,14 +172,14 @@ export const insertCourseMaterialSchema = createInsertSchema(courseMaterials).om
 });
 
 // Exams schema
-export const exams = pgTable("exams", {
-  id: serial("id").primaryKey(),
+export const exams = sqliteTable("exams", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   courseId: integer("course_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
   type: text("type").notNull(), // E-Exam, Pen-on-Paper
-  date: timestamp("date"),
-  createdAt: timestamp("created_at").defaultNow(),
+  date: text("date"),
+  createdAt: text("created_at").default(new Date().toISOString()),
 });
 
 export const insertExamSchema = createInsertSchema(exams).omit({
@@ -74,17 +187,33 @@ export const insertExamSchema = createInsertSchema(exams).omit({
   createdAt: true,
 });
 
+// User Exam Timetable schema
+export const examTimetable = sqliteTable("exam_timetable", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  courseId: integer("course_id").notNull(),
+  examDate: text("exam_date").notNull(),
+  location: text("location"),
+  notes: text("notes"),
+  createdAt: text("created_at").default(new Date().toISOString()),
+});
+
+export const insertExamTimetableSchema = createInsertSchema(examTimetable).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Questions schema
-export const questions = pgTable("questions", {
-  id: serial("id").primaryKey(),
+export const questions = sqliteTable("questions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   courseId: integer("course_id").notNull(),
   content: text("content").notNull(),
-  options: json("options"),
+  options: blob("options"),
   correctAnswer: text("correct_answer"),
   explanation: text("explanation"),
   type: text("type"), // Multiple Choice, True/False, etc.
   difficulty: text("difficulty"), // Easy, Medium, Hard
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: text("created_at").default(new Date().toISOString()),
 });
 
 export const insertQuestionSchema = createInsertSchema(questions).omit({
@@ -93,15 +222,15 @@ export const insertQuestionSchema = createInsertSchema(questions).omit({
 });
 
 // User Progress schema
-export const userProgress = pgTable("user_progress", {
-  id: serial("id").primaryKey(),
+export const userProgress = sqliteTable("user_progress", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull(),
   courseId: integer("course_id").notNull(),
   materialId: integer("material_id"),
   examId: integer("exam_id"),
   score: integer("score"),
-  completed: boolean("completed").default(false),
-  timestamp: timestamp("timestamp").defaultNow(),
+  completed: integer("completed", { mode: "boolean" }).default(false),
+  timestamp: text("timestamp").default(new Date().toISOString()),
 });
 
 export const insertUserProgressSchema = createInsertSchema(userProgress).omit({
@@ -110,8 +239,8 @@ export const insertUserProgressSchema = createInsertSchema(userProgress).omit({
 });
 
 // Jobs schema
-export const jobs = pgTable("jobs", {
-  id: serial("id").primaryKey(),
+export const jobs = sqliteTable("jobs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),
   company: text("company").notNull(),
   location: text("location"),
@@ -119,7 +248,7 @@ export const jobs = pgTable("jobs", {
   description: text("description"),
   requirements: text("requirements"),
   applicationUrl: text("application_url"),
-  postedAt: timestamp("posted_at").defaultNow(),
+  postedAt: text("posted_at").default(new Date().toISOString()),
   faculty: text("faculty"), // For faculty-specific jobs
 });
 
@@ -129,15 +258,15 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
 });
 
 // Forum Posts schema
-export const forumPosts = pgTable("forum_posts", {
-  id: serial("id").primaryKey(),
+export const forumPosts = sqliteTable("forum_posts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull(),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  category: text("category").notNull(), // FAQs, News, Course Group, etc.
-  tags: text("tags").array(),
+  category: text("category").notNull(),
+  tags: text("tags"), // Store as JSON string and parse in application code
   views: integer("views").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: text("created_at").default(new Date().toISOString()),
 });
 
 export const insertForumPostSchema = createInsertSchema(forumPosts).omit({
@@ -147,12 +276,12 @@ export const insertForumPostSchema = createInsertSchema(forumPosts).omit({
 });
 
 // Forum Replies schema
-export const forumReplies = pgTable("forum_replies", {
-  id: serial("id").primaryKey(),
+export const forumReplies = sqliteTable("forum_replies", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   postId: integer("post_id").notNull(),
   userId: integer("user_id").notNull(),
   content: text("content").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: text("created_at").default(new Date().toISOString()),
 });
 
 export const insertForumReplySchema = createInsertSchema(forumReplies).omit({
@@ -161,12 +290,12 @@ export const insertForumReplySchema = createInsertSchema(forumReplies).omit({
 });
 
 // AI Chat Messages schema
-export const chatMessages = pgTable("chat_messages", {
-  id: serial("id").primaryKey(),
+export const chatMessages = sqliteTable("chat_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull(),
   content: text("content").notNull(),
-  isUserMessage: boolean("is_user_message").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
+  isUserMessage: integer("is_user_message", { mode: "boolean" }).default(true),
+  createdAt: text("created_at").default(new Date().toISOString()),
 });
 
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
@@ -175,10 +304,10 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
 });
 
 // User Daily Chat Usage
-export const chatUsage = pgTable("chat_usage", {
-  id: serial("id").primaryKey(),
+export const chatUsage = sqliteTable("chat_usage", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull(),
-  date: timestamp("date").defaultNow(),
+  date: text("date").default(new Date().toISOString()),
   promptsUsed: integer("prompts_used").default(0),
 });
 
@@ -188,12 +317,12 @@ export const insertChatUsageSchema = createInsertSchema(chatUsage).omit({
 });
 
 // Subscriptions
-export const subscriptions = pgTable("subscriptions", {
-  id: serial("id").primaryKey(),
+export const subscriptions = sqliteTable("subscriptions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull(),
   tier: text("tier").notNull(), // Free, Premium
-  startDate: timestamp("start_date").defaultNow(),
-  endDate: timestamp("end_date"),
+  startDate: text("start_date").default(new Date().toISOString()),
+  endDate: text("end_date"),
 });
 
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
@@ -207,6 +336,12 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Course = typeof courses.$inferSelect;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
+
+export type CourseEnrollment = typeof courseEnrollments.$inferSelect;
+export type InsertCourseEnrollment = z.infer<typeof insertCourseEnrollmentSchema>;
+
+export type ExamTimetable = typeof examTimetable.$inferSelect;
+export type InsertExamTimetable = z.infer<typeof insertExamTimetableSchema>;
 
 export type CourseMaterial = typeof courseMaterials.$inferSelect;
 export type InsertCourseMaterial = z.infer<typeof insertCourseMaterialSchema>;
@@ -237,3 +372,30 @@ export type InsertChatUsage = z.infer<typeof insertChatUsageSchema>;
 
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+
+// Types for new schemas
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+export type DocumentChunk = typeof documentChunks.$inferSelect;
+export type InsertDocumentChunk = z.infer<typeof insertDocumentChunkSchema>;
+
+export type Concept = typeof concepts.$inferSelect;
+export type InsertConcept = z.infer<typeof insertConceptSchema>;
+
+export type Exercise = typeof exercises.$inferSelect;
+export type InsertExercise = z.infer<typeof insertExerciseSchema>;
+
+export type SpacedRepetitionStat = typeof spacedRepetitionStats.$inferSelect;
+export type InsertSpacedRepetitionStat = z.infer<typeof insertSpacedRepetitionStatsSchema>;
+
+// Fix for the missing notifications table
+export const notifications = sqliteTable("notifications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  type: text("type").notNull(),
+  message: text("message").notNull(),
+  isRead: integer("is_read", { mode: "boolean" }).default(false),
+  relatedId: integer("related_id"),
+  createdAt: text("created_at").default(new Date().toISOString()),
+});

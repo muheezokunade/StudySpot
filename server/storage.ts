@@ -3,9 +3,14 @@ import {
   InsertCourseMaterial, Exam, InsertExam, Question, InsertQuestion,
   UserProgress, InsertUserProgress, Job, InsertJob, ForumPost,
   InsertForumPost, ForumReply, InsertForumReply, ChatMessage,
-  InsertChatMessage, ChatUsage, InsertChatUsage, Subscription, InsertSubscription
+  InsertChatMessage, ChatUsage, InsertChatUsage, Subscription, InsertSubscription,
+  CourseEnrollment, InsertCourseEnrollment, ExamTimetable, InsertExamTimetable
 } from "@shared/schema";
 import bcrypt from 'bcryptjs';
+import { db } from './db';
+import { eq, and, like, or } from 'drizzle-orm';
+import * as schema from '@shared/schema';
+import { users, courses, courseMaterials, exams, questions, userProgress, jobs, forumPosts, forumReplies, chatMessages, chatUsage, subscriptions, courseEnrollments, examTimetable } from '@shared/schema';
 
 // Interface for storage operations
 export interface IStorage {
@@ -14,12 +19,27 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, data: Partial<User>): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
 
   // Course operations
   getCourses(): Promise<Course[]>;
   getCourse(id: number): Promise<Course | undefined>;
   getCourseByCode(code: string): Promise<Course | undefined>;
   createCourse(course: InsertCourse): Promise<Course>;
+  
+  // Course Enrollment operations
+  getUserEnrollments(userId: number): Promise<CourseEnrollment[]>;
+  getEnrolledUsers(courseId: number): Promise<User[]>;
+  enrollUserInCourse(enrollment: InsertCourseEnrollment): Promise<CourseEnrollment>;
+  unenrollUserFromCourse(userId: number, courseId: number): Promise<void>;
+  isUserEnrolledInCourse(userId: number, courseId: number): Promise<boolean>;
+
+  // Exam Timetable operations
+  getUserExamTimetables(userId: number): Promise<ExamTimetable[]>;
+  getExamTimetable(id: number): Promise<ExamTimetable | undefined>;
+  createExamTimetable(timetable: InsertExamTimetable): Promise<ExamTimetable>;
+  updateExamTimetable(id: number, data: Partial<ExamTimetable>): Promise<ExamTimetable | undefined>;
+  deleteExamTimetable(id: number): Promise<void>;
 
   // Course Material operations
   getCourseMaterials(courseId?: number): Promise<CourseMaterial[]>;
@@ -79,6 +99,8 @@ export class MemStorage implements IStorage {
   private chatMessages: Map<number, ChatMessage>;
   private chatUsage: Map<number, ChatUsage>;
   private subscriptions: Map<number, Subscription>;
+  private courseEnrollments: Map<number, CourseEnrollment>;
+  private examTimetables: Map<number, ExamTimetable>;
 
   private currentIds: {
     user: number;
@@ -93,6 +115,8 @@ export class MemStorage implements IStorage {
     chatMessage: number;
     chatUsage: number;
     subscription: number;
+    courseEnrollment: number;
+    examTimetable: number;
   };
 
   constructor() {
@@ -108,6 +132,8 @@ export class MemStorage implements IStorage {
     this.chatMessages = new Map();
     this.chatUsage = new Map();
     this.subscriptions = new Map();
+    this.courseEnrollments = new Map();
+    this.examTimetables = new Map();
 
     this.currentIds = {
       user: 1,
@@ -122,6 +148,8 @@ export class MemStorage implements IStorage {
       chatMessage: 1,
       chatUsage: 1,
       subscription: 1,
+      courseEnrollment: 1,
+      examTimetable: 1,
     };
 
     // Initialize with sample data
@@ -224,6 +252,10 @@ export class MemStorage implements IStorage {
     const updatedUser = { ...user, ...data };
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
   }
 
   // Course operations
@@ -475,190 +507,339 @@ export class MemStorage implements IStorage {
     this.subscriptions.set(id, updatedSub);
     return updatedSub;
   }
-}
 
-import { db } from './db';
-import { eq, and, like, or } from 'drizzle-orm';
+  // Course Enrollment Operations
+  async getUserEnrollments(userId: number): Promise<CourseEnrollment[]> {
+    const enrollments = await db
+      .select()
+      .from(schema.courseEnrollments)
+      .where(eq(schema.courseEnrollments.userId, userId))
+      .where(eq(schema.courseEnrollments.isActive, true));
+    
+    return enrollments;
+  }
+
+  async getEnrolledUsers(courseId: number): Promise<User[]> {
+    const users = await db
+      .select({
+        id: schema.users.id,
+        firstName: schema.users.firstName,
+        email: schema.users.email,
+        school: schema.users.school,
+        level: schema.users.level,
+      })
+      .from(schema.users)
+      .innerJoin(
+        schema.courseEnrollments,
+        and(
+          eq(schema.users.id, schema.courseEnrollments.userId),
+          eq(schema.courseEnrollments.courseId, courseId),
+          eq(schema.courseEnrollments.isActive, true)
+        )
+      );
+    
+    return users as User[];
+  }
+
+  async enrollUserInCourse(enrollment: InsertCourseEnrollment): Promise<CourseEnrollment> {
+    // Check if user is already enrolled in this course
+    const existingEnrollment = await db
+      .select()
+      .from(schema.courseEnrollments)
+      .where(
+        and(
+          eq(schema.courseEnrollments.userId, enrollment.userId),
+          eq(schema.courseEnrollments.courseId, enrollment.courseId)
+        )
+      )
+      .limit(1);
+
+    if (existingEnrollment.length > 0) {
+      // If enrollment exists but is not active, reactivate it
+      if (!existingEnrollment[0].isActive) {
+        const [updated] = await db
+          .update(schema.courseEnrollments)
+          .set({ isActive: true })
+          .where(eq(schema.courseEnrollments.id, existingEnrollment[0].id))
+          .returning();
+        return updated;
+      }
+      // If already active, return existing enrollment
+      return existingEnrollment[0];
+    }
+
+    // Create new enrollment
+    const [newEnrollment] = await db
+      .insert(schema.courseEnrollments)
+      .values(enrollment)
+      .returning();
+    
+    return newEnrollment;
+  }
+
+  async unenrollUserFromCourse(userId: number, courseId: number): Promise<void> {
+    await db
+      .update(schema.courseEnrollments)
+      .set({ isActive: false })
+      .where(
+        and(
+          eq(schema.courseEnrollments.userId, userId),
+          eq(schema.courseEnrollments.courseId, courseId)
+        )
+      );
+  }
+
+  async isUserEnrolledInCourse(userId: number, courseId: number): Promise<boolean> {
+    const enrollment = await db
+      .select()
+      .from(schema.courseEnrollments)
+      .where(
+        and(
+          eq(schema.courseEnrollments.userId, userId),
+          eq(schema.courseEnrollments.courseId, courseId),
+          eq(schema.courseEnrollments.isActive, true)
+        )
+      )
+      .limit(1);
+    
+    return enrollment.length > 0;
+  }
+
+  // Exam Timetable Operations
+  async getUserExamTimetables(userId: number): Promise<ExamTimetable[]> {
+    const timetables = await db
+      .select()
+      .from(schema.examTimetable)
+      .where(eq(schema.examTimetable.userId, userId))
+      .orderBy(schema.examTimetable.examDate);
+    
+    return timetables;
+  }
+  
+  async getExamTimetable(id: number): Promise<ExamTimetable | undefined> {
+    const [timetable] = await db
+      .select()
+      .from(schema.examTimetable)
+      .where(eq(schema.examTimetable.id, id));
+    
+    return timetable;
+  }
+  
+  async createExamTimetable(timetable: InsertExamTimetable): Promise<ExamTimetable> {
+    const [newTimetable] = await db
+      .insert(schema.examTimetable)
+      .values(timetable)
+      .returning();
+      
+    return newTimetable;
+  }
+  
+  async updateExamTimetable(id: number, data: Partial<ExamTimetable>): Promise<ExamTimetable | undefined> {
+    const [timetable] = await db
+      .update(schema.examTimetable)
+      .set(data)
+      .where(eq(schema.examTimetable.id, id))
+      .returning();
+      
+    return timetable;
+  }
+  
+  async deleteExamTimetable(id: number): Promise<void> {
+    await db
+      .delete(schema.examTimetable)
+      .where(eq(schema.examTimetable.id, id));
+  }
+}
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id));
     return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.email, email));
     return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    // Hash the password before storing it
+    const hashedPassword = await bcrypt.hash(insertUser.password, 10);
+    
+    const [user] = await db.insert(schema.users).values({
+      ...insertUser,
+      password: hashedPassword
+    }).returning();
     return user;
   }
 
   async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
-    const [user] = await db.update(users).set(data).where(eq(users.id, id)).returning();
+    const [user] = await db.update(schema.users).set(data).where(eq(schema.users.id, id)).returning();
     return user;
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(schema.users);
+  }
+
   async getCourses(): Promise<Course[]> {
-    return db.select().from(courses);
+    return db.select().from(schema.courses);
   }
 
   async getCourse(id: number): Promise<Course | undefined> {
-    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    const [course] = await db.select().from(schema.courses).where(eq(schema.courses.id, id));
     return course;
   }
 
   async getCourseByCode(code: string): Promise<Course | undefined> {
-    const [course] = await db.select().from(courses).where(eq(courses.code, code));
+    const [course] = await db.select().from(schema.courses).where(eq(schema.courses.code, code));
     return course;
   }
 
   async createCourse(insertCourse: InsertCourse): Promise<Course> {
-    const [course] = await db.insert(courses).values(insertCourse).returning();
+    const [course] = await db.insert(schema.courses).values(insertCourse).returning();
     return course;
   }
 
   async getCourseMaterials(courseId?: number): Promise<CourseMaterial[]> {
     if (courseId) {
-      return db.select().from(courseMaterials).where(eq(courseMaterials.courseId, courseId));
+      return db.select().from(schema.courseMaterials).where(eq(schema.courseMaterials.courseId, courseId));
     }
-    return db.select().from(courseMaterials);
+    return db.select().from(schema.courseMaterials);
   }
 
   async getCourseMaterial(id: number): Promise<CourseMaterial | undefined> {
-    const [material] = await db.select().from(courseMaterials).where(eq(courseMaterials.id, id));
+    const [material] = await db.select().from(schema.courseMaterials).where(eq(schema.courseMaterials.id, id));
     return material;
   }
 
   async createCourseMaterial(insertMaterial: InsertCourseMaterial): Promise<CourseMaterial> {
-    const [material] = await db.insert(courseMaterials).values(insertMaterial).returning();
+    const [material] = await db.insert(schema.courseMaterials).values(insertMaterial).returning();
     return material;
   }
 
   async getExams(courseId?: number): Promise<Exam[]> {
     if (courseId) {
-      return db.select().from(exams).where(eq(exams.courseId, courseId));
+      return db.select().from(schema.exams).where(eq(schema.exams.courseId, courseId));
     }
-    return db.select().from(exams);
+    return db.select().from(schema.exams);
   }
 
   async getExam(id: number): Promise<Exam | undefined> {
-    const [exam] = await db.select().from(exams).where(eq(exams.id, id));
+    const [exam] = await db.select().from(schema.exams).where(eq(schema.exams.id, id));
     return exam;
   }
 
   async createExam(insertExam: InsertExam): Promise<Exam> {
-    const [exam] = await db.insert(exams).values(insertExam).returning();
+    const [exam] = await db.insert(schema.exams).values(insertExam).returning();
     return exam;
   }
 
   async getQuestions(courseId: number): Promise<Question[]> {
-    return db.select().from(questions).where(eq(questions.courseId, courseId));
+    return db.select().from(schema.questions).where(eq(schema.questions.courseId, courseId));
   }
 
   async getQuestion(id: number): Promise<Question | undefined> {
-    const [question] = await db.select().from(questions).where(eq(questions.id, id));
+    const [question] = await db.select().from(schema.questions).where(eq(schema.questions.id, id));
     return question;
   }
 
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
-    const [question] = await db.insert(questions).values(insertQuestion).returning();
+    const [question] = await db.insert(schema.questions).values(insertQuestion).returning();
     return question;
   }
 
   async getUserProgress(userId: number): Promise<UserProgress[]> {
-    return db.select().from(userProgress).where(eq(userProgress.userId, userId));
+    return db.select().from(schema.userProgress).where(eq(schema.userProgress.userId, userId));
   }
 
   async createUserProgress(insertProgress: InsertUserProgress): Promise<UserProgress> {
-    const [progress] = await db.insert(userProgress).values(insertProgress).returning();
+    const [progress] = await db.insert(schema.userProgress).values(insertProgress).returning();
     return progress;
   }
 
   async updateUserProgress(id: number, data: Partial<UserProgress>): Promise<UserProgress | undefined> {
-    const [progress] = await db.update(userProgress).set(data).where(eq(userProgress.id, id)).returning();
+    const [progress] = await db.update(schema.userProgress).set(data).where(eq(schema.userProgress.id, id)).returning();
     return progress;
   }
 
   async getJobs(filters?: Partial<{ location: string, type: string, faculty: string }>): Promise<Job[]> {
     if (!filters) {
-      return db.select().from(jobs);
+      return db.select().from(schema.jobs);
     }
 
     const conditions = [];
     if (filters.location) {
-      conditions.push(eq(jobs.location, filters.location));
+      conditions.push(eq(schema.jobs.location, filters.location));
     }
     if (filters.type) {
-      conditions.push(eq(jobs.type, filters.type));
+      conditions.push(eq(schema.jobs.type, filters.type));
     }
     if (filters.faculty) {
-      conditions.push(like(jobs.description, `%${filters.faculty}%`));
+      conditions.push(like(schema.jobs.description, `%${filters.faculty}%`));
     }
 
     if (conditions.length === 0) {
-      return db.select().from(jobs);
+      return db.select().from(schema.jobs);
     }
 
-    return db.select().from(jobs).where(and(...conditions));
+    return db.select().from(schema.jobs).where(and(...conditions));
   }
 
   async getJob(id: number): Promise<Job | undefined> {
-    const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
+    const [job] = await db.select().from(schema.jobs).where(eq(schema.jobs.id, id));
     return job;
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    const [job] = await db.insert(jobs).values(insertJob).returning();
+    const [job] = await db.insert(schema.jobs).values(insertJob).returning();
     return job;
   }
 
   async getForumPosts(category?: string): Promise<ForumPost[]> {
     if (category) {
-      return db.select().from(forumPosts).where(eq(forumPosts.category, category));
+      return db.select().from(schema.forumPosts).where(eq(schema.forumPosts.category, category));
     }
-    return db.select().from(forumPosts);
+    return db.select().from(schema.forumPosts);
   }
 
   async getForumPost(id: number): Promise<ForumPost | undefined> {
-    const [post] = await db.select().from(forumPosts).where(eq(forumPosts.id, id));
+    const [post] = await db.select().from(schema.forumPosts).where(eq(schema.forumPosts.id, id));
     return post;
   }
 
   async createForumPost(insertPost: InsertForumPost): Promise<ForumPost> {
-    const [post] = await db.insert(forumPosts).values(insertPost).returning();
+    const [post] = await db.insert(schema.forumPosts).values(insertPost).returning();
     return post;
   }
 
   async getForumReplies(postId: number): Promise<ForumReply[]> {
-    return db.select().from(forumReplies).where(eq(forumReplies.postId, postId));
+    return db.select().from(schema.forumReplies).where(eq(schema.forumReplies.postId, postId));
   }
 
   async createForumReply(insertReply: InsertForumReply): Promise<ForumReply> {
-    const [reply] = await db.insert(forumReplies).values(insertReply).returning();
+    const [reply] = await db.insert(schema.forumReplies).values(insertReply).returning();
     return reply;
   }
 
   async incrementPostViews(postId: number): Promise<void> {
     await db
-      .update(forumPosts)
+      .update(schema.forumPosts)
       .set({ views: (fPost) => fPost.views + 1 })
-      .where(eq(forumPosts.id, postId));
+      .where(eq(schema.forumPosts.id, postId));
   }
 
   async getChatMessages(userId: number): Promise<ChatMessage[]> {
-    return db.select().from(chatMessages).where(eq(chatMessages.userId, userId));
+    return db.select().from(schema.chatMessages).where(eq(schema.chatMessages.userId, userId));
   }
 
   async createChatMessage(insertMessage: InsertChatMessage): Promise<ChatMessage> {
-    const [message] = await db.insert(chatMessages).values(insertMessage).returning();
+    const [message] = await db.insert(schema.chatMessages).values(insertMessage).returning();
     return message;
   }
 
   async getChatUsage(userId: number): Promise<ChatUsage | undefined> {
-    const [usage] = await db.select().from(chatUsage).where(eq(chatUsage.userId, userId));
+    const [usage] = await db.select().from(schema.chatUsage).where(eq(schema.chatUsage.userId, userId));
     return usage;
   }
 
@@ -667,33 +848,175 @@ export class DatabaseStorage implements IStorage {
     
     if (existingUsage) {
       const [usage] = await db
-        .update(chatUsage)
-        .set({ messagesUsed: existingUsage.messagesUsed + used })
-        .where(eq(chatUsage.userId, userId))
+        .update(schema.chatUsage)
+        .set({ promptsUsed: existingUsage.promptsUsed + used })
+        .where(eq(schema.chatUsage.userId, userId))
         .returning();
       return usage;
     } else {
       const [usage] = await db
-        .insert(chatUsage)
-        .values({ userId, messagesUsed: used })
+        .insert(schema.chatUsage)
+        .values({ userId, promptsUsed: used })
         .returning();
       return usage;
     }
   }
 
   async getUserSubscription(userId: number): Promise<Subscription | undefined> {
-    const [subscription] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId));
+    const [subscription] = await db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId));
     return subscription;
   }
 
   async createSubscription(insertSub: InsertSubscription): Promise<Subscription> {
-    const [subscription] = await db.insert(subscriptions).values(insertSub).returning();
+    const [subscription] = await db.insert(schema.subscriptions).values(insertSub).returning();
     return subscription;
   }
 
   async updateSubscription(id: number, data: Partial<Subscription>): Promise<Subscription | undefined> {
-    const [subscription] = await db.update(subscriptions).set(data).where(eq(subscriptions.id, id)).returning();
+    const [subscription] = await db.update(schema.subscriptions).set(data).where(eq(schema.subscriptions.id, id)).returning();
     return subscription;
+  }
+
+  // Course Enrollment Operations
+  async getUserEnrollments(userId: number): Promise<CourseEnrollment[]> {
+    const enrollments = await db
+      .select()
+      .from(schema.courseEnrollments)
+      .where(eq(schema.courseEnrollments.userId, userId))
+      .where(eq(schema.courseEnrollments.isActive, true));
+    
+    return enrollments;
+  }
+  
+  async getEnrolledUsers(courseId: number): Promise<User[]> {
+    const users = await db
+      .select({
+        id: schema.users.id,
+        firstName: schema.users.firstName,
+        email: schema.users.email,
+        school: schema.users.school,
+        level: schema.users.level,
+      })
+      .from(schema.users)
+      .innerJoin(
+        schema.courseEnrollments,
+        and(
+          eq(schema.users.id, schema.courseEnrollments.userId),
+          eq(schema.courseEnrollments.courseId, courseId),
+          eq(schema.courseEnrollments.isActive, true)
+        )
+      );
+    
+    return users as User[];
+  }
+  
+  async enrollUserInCourse(enrollment: InsertCourseEnrollment): Promise<CourseEnrollment> {
+    // Check if user is already enrolled in this course
+    const existingEnrollment = await db
+      .select()
+      .from(schema.courseEnrollments)
+      .where(
+        and(
+          eq(schema.courseEnrollments.userId, enrollment.userId),
+          eq(schema.courseEnrollments.courseId, enrollment.courseId)
+        )
+      )
+      .limit(1);
+
+    if (existingEnrollment.length > 0) {
+      // If enrollment exists but is not active, reactivate it
+      if (!existingEnrollment[0].isActive) {
+        const [updated] = await db
+          .update(schema.courseEnrollments)
+          .set({ isActive: true })
+          .where(eq(schema.courseEnrollments.id, existingEnrollment[0].id))
+          .returning();
+        return updated;
+      }
+      // If already active, return existing enrollment
+      return existingEnrollment[0];
+    }
+
+    // Create new enrollment
+    const [newEnrollment] = await db
+      .insert(schema.courseEnrollments)
+      .values(enrollment)
+      .returning();
+    
+    return newEnrollment;
+  }
+  
+  async unenrollUserFromCourse(userId: number, courseId: number): Promise<void> {
+    await db
+      .update(schema.courseEnrollments)
+      .set({ isActive: false })
+      .where(
+        and(
+          eq(schema.courseEnrollments.userId, userId),
+          eq(schema.courseEnrollments.courseId, courseId)
+        )
+      );
+  }
+  
+  async isUserEnrolledInCourse(userId: number, courseId: number): Promise<boolean> {
+    const enrollment = await db
+      .select()
+      .from(schema.courseEnrollments)
+      .where(
+        and(
+          eq(schema.courseEnrollments.userId, userId),
+          eq(schema.courseEnrollments.courseId, courseId),
+          eq(schema.courseEnrollments.isActive, true)
+        )
+      )
+      .limit(1);
+    
+    return enrollment.length > 0;
+  }
+
+  // Exam Timetable Operations
+  async getUserExamTimetables(userId: number): Promise<ExamTimetable[]> {
+    const timetables = await db
+      .select()
+      .from(schema.examTimetable)
+      .where(eq(schema.examTimetable.userId, userId))
+      .orderBy(schema.examTimetable.examDate);
+    
+    return timetables;
+  }
+  
+  async getExamTimetable(id: number): Promise<ExamTimetable | undefined> {
+    const [timetable] = await db
+      .select()
+      .from(schema.examTimetable)
+      .where(eq(schema.examTimetable.id, id));
+    
+    return timetable;
+  }
+  
+  async createExamTimetable(timetable: InsertExamTimetable): Promise<ExamTimetable> {
+    const [newTimetable] = await db
+      .insert(schema.examTimetable)
+      .values(timetable)
+      .returning();
+      
+    return newTimetable;
+  }
+  
+  async updateExamTimetable(id: number, data: Partial<ExamTimetable>): Promise<ExamTimetable | undefined> {
+    const [timetable] = await db
+      .update(schema.examTimetable)
+      .set(data)
+      .where(eq(schema.examTimetable.id, id))
+      .returning();
+      
+    return timetable;
+  }
+  
+  async deleteExamTimetable(id: number): Promise<void> {
+    await db
+      .delete(schema.examTimetable)
+      .where(eq(schema.examTimetable.id, id));
   }
 }
 

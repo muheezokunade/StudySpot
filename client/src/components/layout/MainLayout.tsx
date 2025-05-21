@@ -1,50 +1,57 @@
-import React, { useState, ReactNode, useEffect } from 'react';
+import React, { useState, ReactNode } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
 import MobileMenu from './MobileMenu';
 import AIChatPanel from '../chat/AIChatPanel';
+import { useAuthContext } from '@/context/AuthContext';
 
 interface MainLayoutProps {
   children: ReactNode;
+  onAIChatOpen?: () => void;
+  onMobileMenuOpen?: () => void;
 }
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+const MainLayout: React.FC<MainLayoutProps> = ({ 
+  children, 
+  onAIChatOpen: externalAIChatOpen, 
+  onMobileMenuOpen: externalMobileMenuOpen 
+}) => {
+  const { user } = useAuthContext();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
-
+  
+  // Handle mobile menu
   const handleMobileMenuOpen = () => {
-    setMobileMenuOpen(true);
+    if (externalMobileMenuOpen) {
+      externalMobileMenuOpen();
+    } else {
+      setMobileMenuOpen(true);
+    }
   };
-
+  
   const handleMobileMenuClose = () => {
     setMobileMenuOpen(false);
   };
-
+  
+  // Handle AI chat
   const handleAIChatOpen = () => {
-    setAiChatOpen(true);
+    if (externalAIChatOpen) {
+      externalAIChatOpen();
+    } else {
+      setAiChatOpen(true);
+    }
   };
-
+  
   const handleAIChatClose = () => {
     setAiChatOpen(false);
   };
 
-  // Set up global event listener for AI Chat button
-  useEffect(() => {
-    const handleGlobalAIChatOpen = () => {
-      setAiChatOpen(true);
-    };
-    
-    window.addEventListener('openAIChat', handleGlobalAIChatOpen);
-    
-    return () => {
-      window.removeEventListener('openAIChat', handleGlobalAIChatOpen);
-    };
-  }, []);
-
   return (
     <div className="min-h-screen flex flex-col">
       <Header 
+        user={user} 
+        setUser={() => {}} // This should ideally come from context
         onMobileMenuOpen={handleMobileMenuOpen} 
         onAIChatOpen={handleAIChatOpen} 
       />
@@ -65,12 +72,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         onAIChatOpen={handleAIChatOpen}
       />
       
-      <AIChatPanel 
-        isOpen={aiChatOpen} 
-        onClose={handleAIChatClose} 
-      />
+      {/* Only show AIChatPanel if we're managing it internally */}
+      {!externalAIChatOpen && (
+        <AIChatPanel 
+          isOpen={aiChatOpen} 
+          onClose={handleAIChatClose} 
+        />
+      )}
       
-      {/* Floating AI Chat Button - positioned higher to avoid overlap */}
+      {/* Floating AI Chat Button */}
       <button 
         onClick={handleAIChatOpen}
         className="fixed bottom-20 right-6 z-40 bg-forest-600 text-white rounded-full p-3 shadow-lg hover:bg-forest-700 transition-colors"

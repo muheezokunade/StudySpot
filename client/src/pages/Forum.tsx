@@ -29,12 +29,16 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 
+interface ForumResponse {
+  posts: ForumPost[];
+}
+
 const Forum: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   
   // Get forum posts with category filter
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<ForumResponse>({
     queryKey: [
       '/api/forum/posts', 
       { category: activeCategory !== 'all' ? activeCategory : undefined }
@@ -47,11 +51,11 @@ const Forum: React.FC = () => {
     
     if (!searchTerm.trim()) return data.posts;
     
-    return data.posts.filter(post => 
+    return data.posts.filter((post: ForumPost) => 
       post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
       post.author?.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (post.tags && post.tags.some(tag => 
+      (post.tags && post.tags.some((tag: string) => 
         tag.toLowerCase().includes(searchTerm.toLowerCase())
       ))
     );
@@ -190,14 +194,12 @@ const Forum: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <Link href={`/forum/${post.id}`}>
-                        <a className="block">
-                          <CardTitle className="text-lg hover:text-forest-600 transition-colors mb-2">
-                            {post.title}
-                          </CardTitle>
-                          <CardDescription className="line-clamp-2">
-                            {post.content}
-                          </CardDescription>
-                        </a>
+                        <CardTitle className="text-lg hover:text-forest-600 transition-colors mb-2">
+                          {post.title}
+                        </CardTitle>
+                        <CardDescription className="line-clamp-2">
+                          {post.content}
+                        </CardDescription>
                       </Link>
                       
                       {post.tags && post.tags.length > 0 && (
@@ -229,32 +231,14 @@ const Forum: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Filter className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Posts Found</h3>
-                <p className="text-gray-500 mb-4">
-                  {searchTerm 
-                    ? `No posts match "${searchTerm}". Try a different search term.` 
-                    : activeCategory !== 'all' 
-                      ? `No posts found in the "${activeCategory}" category.` 
-                      : "No forum posts yet. Be the first to start a discussion!"}
-                </p>
-                
-                {searchTerm ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => setSearchTerm('')}
-                    className="text-forest-600 border-forest-600 hover:bg-forest-50 mr-2"
-                  >
-                    Clear Search
+              <div className="glass-card p-8 text-center">
+                <h3 className="text-xl font-medium text-gray-700 mb-4">No Posts Found</h3>
+                <p className="text-gray-600 mb-6">No forum posts yet. Be the first to start a discussion!</p>
+                <Link href="/forum/new">
+                  <Button className="bg-forest-600 hover:bg-forest-700">
+                    Create a Post
                   </Button>
-                ) : (
-                  <Link href="/forum/new">
-                    <Button className="bg-forest-600 hover:bg-forest-700">
-                      Create a Post
-                    </Button>
-                  </Link>
-                )}
+                </Link>
               </div>
             )}
           </TabsContent>

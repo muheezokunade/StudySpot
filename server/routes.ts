@@ -5,11 +5,52 @@ import { generateAIResponse, generateCourseSummary, generateQuizQuestions } from
 import bcrypt from 'bcryptjs';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import pdfParse from 'pdf-parse';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import tutorRoutes from './tutorRoutes';
+
+// Fix for ES modules (no __dirname)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+  console.log('Creating uploads directory at:', uploadDir);
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // User-defined type guard for checking if the user is logged in
 function isAuthenticated(req: Request): boolean {
   return req.session && req.session.user !== undefined;
 }
+
+// Set up multer for file uploads
+const upload = multer({
+  dest: uploadDir,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['text/plain', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const fileExt = path.extname(file.originalname).toLowerCase();
+    const allowedExts = ['.txt', '.pdf', '.doc', '.docx'];
+    
+    if (allowedExts.includes(fileExt)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type. Only ${allowedExts.join(', ')} files are allowed.`));
+    }
+  }
+});
+
+// Ultra-simple file upload handler that doesn't depend on pdf-parse
+const uploadSimple = multer({
+  dest: uploadDir,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up session middleware
@@ -48,13 +89,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(409).json({ message: 'User with this email already exists' });
       }
       
-      // Create user
+      // Check if this is the first user and make them admin
+      const allUsers = await storage.getAllUsers();
+      const isFirstUser = allUsers.length === 0;
+
       const newUser = await storage.createUser({
         firstName,
         email,
         password,
         school: school || 'National Open University of Nigeria',
-        referralCode
+        referralCode,
+        role: isFirstUser ? 'admin' : 'user'
       });
       
       // Create free tier subscription
@@ -68,7 +113,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: newUser.id,
         firstName: newUser.firstName,
         email: newUser.email,
-        school: newUser.school
+        school: newUser.school,
+        role: newUser.role
       };
       
       req.session.user = userWithoutPassword;
@@ -109,7 +155,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: user.id,
         firstName: user.firstName,
         email: user.email,
-        school: user.school
+        school: user.school,
+        role: user.role
       };
       
       req.session.user = userWithoutPassword;
@@ -260,10 +307,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/materials', async (req: Request, res: Response) => {
     try {
       const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
+      const type = req.query.type as string | undefined;
+      
       const materials = await storage.getCourseMaterials(courseId);
+      
       return res.status(200).json({ materials });
     } catch (error) {
       console.error('Materials error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  app.post('/api/materials', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const { title, courseId, type, description, content, fileUrl } = req.body;
+      
+      if (!title || !courseId) {
+        return res.status(400).json({ message: 'Title and courseId are required' });
+      }
+      
+      // Check if course exists
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: 'Course not found' });
+      }
+      
+      const newMaterial = await storage.createMaterial({
+        title,
+        courseId,
+        type: type || 'Note',
+        description,
+        content,
+        fileUrl
+      });
+      
+      return res.status(201).json({ 
+        message: 'Material created successfully',
+        material: newMaterial
+      });
+    } catch (error) {
+      console.error('Material creation error:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
@@ -341,18 +428,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.user!.id;
       const progress = await storage.getUserProgress(userId);
       
-      // Get details for each progress entry
+      // Get course details for each progress entry
       const enrichedProgress = await Promise.all(
-        progress.map(async (p) => {
-          const course = await storage.getCourse(p.courseId);
-          const material = p.materialId ? await storage.getCourseMaterial(p.materialId) : null;
-          const exam = p.examId ? await storage.getExam(p.examId) : null;
+        progress.map(async (item) => {
+          const course = await storage.getCourse(item.courseId);
+          let material = null;
+          if (item.materialId) {
+            material = await storage.getCourseMaterial(item.materialId);
+          }
           
           return {
-            ...p,
-            course: course ? { id: course.id, code: course.code, title: course.title } : null,
-            material: material ? { id: material.id, title: material.title, type: material.type } : null,
-            exam: exam ? { id: exam.id, title: exam.title, type: exam.type } : null
+            ...item,
+            course,
+            material
           };
         })
       );
@@ -371,27 +459,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const userId = req.session.user!.id;
-      const { courseId, materialId, examId, score, completed } = req.body;
+      const { courseId, materialId, completed, score } = req.body;
       
       if (!courseId) {
         return res.status(400).json({ message: 'Course ID is required' });
       }
       
-      const newProgress = await storage.createUserProgress({
+      // Check if user is enrolled in the course
+      const isEnrolled = await storage.isUserEnrolledInCourse(userId, courseId);
+      if (!isEnrolled) {
+        return res.status(403).json({ message: 'You must be enrolled in this course to track progress' });
+      }
+      
+      // Create or update progress
+      const progress = await storage.createUserProgress({
         userId,
         courseId,
         materialId,
-        examId,
-        score,
-        completed: completed || false
+        completed: completed || false,
+        score
       });
       
-      return res.status(201).json({ 
-        message: 'Progress saved successfully',
-        progress: newProgress
+      return res.status(201).json({
+        message: 'Progress updated successfully',
+        progress
       });
     } catch (error) {
-      console.error('Save progress error:', error);
+      console.error('Progress update error:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
@@ -407,12 +501,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Sort by posted date (newest first)
       jobs.sort((a, b) => {
-        return new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime();
+        const dateA = a.postedAt ? new Date(a.postedAt) : new Date(0);
+        const dateB = b.postedAt ? new Date(b.postedAt) : new Date(0);
+        return dateB.getTime() - dateA.getTime();
       });
       
       return res.status(200).json({ jobs });
     } catch (error) {
       console.error('Jobs error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  app.post('/api/admin/jobs', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    
+    try {
+      const { title, company, location, type, faculty, description, requirements, applicationUrl } = req.body;
+      
+      // Validate required fields
+      if (!title || !company) {
+        return res.status(400).json({ message: 'Title and company are required fields' });
+      }
+      
+      // Create the job
+      const newJob = await storage.createJob({
+        title,
+        company,
+        location,
+        type,
+        faculty,
+        description,
+        requirements,
+        applicationUrl
+      });
+      
+      return res.status(201).json({ 
+        message: 'Job created successfully',
+        job: newJob
+      });
+    } catch (error) {
+      console.error('Job creation error:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
@@ -441,7 +572,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Sort by created date (newest first)
       posts.sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        return dateB.getTime() - dateA.getTime();
       });
       
       // Get reply counts for each post
@@ -501,7 +634,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Sort replies by date (oldest first)
       enrichedReplies.sort((a, b) => {
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        return dateA.getTime() - dateB.getTime();
       });
       
       return res.status(200).json({ 
@@ -618,52 +753,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Prompt is required' });
       }
       
-      // Check subscription tier and chat usage limits
-      const subscription = await storage.getUserSubscription(userId);
-      const tier = subscription ? subscription.tier : 'Free';
-      
-      if (tier === 'Free') {
-        const usage = await storage.getChatUsage(userId);
-        const promptsUsed = usage ? usage.promptsUsed : 0;
-        
-        // Free tier users get 5 prompts per day
-        if (promptsUsed >= 5) {
-          return res.status(403).json({ 
-            message: 'You have reached your daily limit of 5 free prompts. Upgrade to Premium for unlimited access.',
-            promptsUsed,
-            promptLimit: 5
-          });
-        }
-        
-        // Update usage
-        await storage.updateChatUsage(userId, 1);
-      }
-      
-      // Save user message
-      await storage.createChatMessage({
-        userId,
-        content: prompt,
-        isUserMessage: true
-      });
-      
       // Generate AI response
       const aiResponse = await generateAIResponse(prompt);
       
-      // Save AI response
-      const savedResponse = await storage.createChatMessage({
-        userId,
-        content: aiResponse,
-        isUserMessage: false
-      });
-      
-      // Get updated usage
-      const updatedUsage = await storage.getChatUsage(userId);
-      const promptsUsed = updatedUsage ? updatedUsage.promptsUsed : 0;
-      
+      // Return the response
       return res.status(200).json({ 
-        message: savedResponse,
-        promptsUsed,
-        promptLimit: tier === 'Free' ? 5 : null
+        response: aiResponse,
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
       console.error('AI chat error:', error);
@@ -678,18 +774,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const userId = req.session.user!.id;
-      const messages = await storage.getChatMessages(userId);
       
-      // Get usage info
-      const subscription = await storage.getUserSubscription(userId);
-      const tier = subscription ? subscription.tier : 'Free';
-      const usage = await storage.getChatUsage(userId);
-      const promptsUsed = usage ? usage.promptsUsed : 0;
-      
+      // For now, return an empty history as the core functionality
       return res.status(200).json({ 
-        messages,
-        promptsUsed,
-        promptLimit: tier === 'Free' ? 5 : null
+        messages: [],
+        promptsUsed: 0,
+        promptLimit: null
       });
     } catch (error) {
       console.error('Chat history error:', error);
@@ -739,6 +829,513 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
+
+  // Add admin routes
+  app.post('/api/admin/make-admin', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req) || req.session.user!.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const updatedUser = await storage.updateUser(userId, { role: 'admin' });
+      
+      return res.status(200).json({ 
+        message: 'User promoted to admin successfully',
+        user: {
+          id: updatedUser!.id,
+          firstName: updatedUser!.firstName,
+          email: updatedUser!.email,
+          role: updatedUser!.role
+        }
+      });
+    } catch (error) {
+      console.error('Make admin error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Admin user management
+  app.get('/api/admin/users', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req) || req.session.user!.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    
+    try {
+      const allUsers = await storage.getAllUsers();
+      
+      const users = allUsers.map(user => ({
+        id: user.id,
+        firstName: user.firstName,
+        email: user.email,
+        school: user.school,
+        studyCenter: user.studyCenter,
+        level: user.level,
+        role: user.role,
+        status: user.isVerified ? 'active' : 'inactive',
+        createdAt: user.createdAt
+      }));
+      
+      return res.status(200).json({ users });
+    } catch (error) {
+      console.error('Admin users error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Admin course management
+  app.get('/api/admin/courses', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req) || req.session.user!.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    
+    try {
+      const courses = await storage.getCourses();
+      return res.status(200).json({ courses });
+    } catch (error) {
+      console.error('Admin courses error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Course enrollment routes
+  app.get('/api/enrollments', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.session.user!.id;
+      const enrollments = await storage.getUserEnrollments(userId);
+      
+      // Get course details for each enrollment
+      const enrolledCourses = await Promise.all(
+        enrollments.map(async (enrollment) => {
+          const course = await storage.getCourse(enrollment.courseId);
+          return {
+            ...enrollment,
+            course
+          };
+        })
+      );
+      
+      return res.status(200).json({ enrollments: enrolledCourses });
+    } catch (error) {
+      console.error('Enrollments error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  app.post('/api/enrollments', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.session.user!.id;
+      const { courseId } = req.body;
+      
+      if (!courseId) {
+        return res.status(400).json({ message: 'Course ID is required' });
+      }
+      
+      // Check if user is already enrolled
+      const isEnrolled = await storage.isUserEnrolledInCourse(userId, courseId);
+      if (isEnrolled) {
+        return res.status(409).json({ message: 'User is already enrolled in this course' });
+      }
+      
+      // Enroll the user
+      const enrollment = await storage.enrollUserInCourse({
+        userId,
+        courseId,
+        isActive: true
+      });
+      
+      // Get course details
+      const course = await storage.getCourse(courseId);
+      
+      return res.status(201).json({
+        message: 'Enrolled successfully',
+        enrollment: {
+          ...enrollment,
+          course
+        }
+      });
+    } catch (error) {
+      console.error('Enrollment error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  app.delete('/api/enrollments/:courseId', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.session.user!.id;
+      const courseId = parseInt(req.params.courseId);
+      
+      // Check if user is enrolled
+      const isEnrolled = await storage.isUserEnrolledInCourse(userId, courseId);
+      if (!isEnrolled) {
+        return res.status(404).json({ message: 'User is not enrolled in this course' });
+      }
+      
+      // Unenroll the user
+      await storage.unenrollUserFromCourse(userId, courseId);
+      
+      return res.status(200).json({ message: 'Unenrolled successfully' });
+    } catch (error) {
+      console.error('Unenrollment error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Exam timetable routes
+  app.get('/api/exam-timetable', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.session.user!.id;
+      const timetables = await storage.getUserExamTimetables(userId);
+      
+      // Get course details for each timetable entry
+      const enrichedTimetables = await Promise.all(
+        timetables.map(async (timetable) => {
+          const course = await storage.getCourse(timetable.courseId);
+          return {
+            ...timetable,
+            course
+          };
+        })
+      );
+      
+      return res.status(200).json({ timetables: enrichedTimetables });
+    } catch (error) {
+      console.error('Exam timetable error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  app.post('/api/exam-timetable', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.session.user!.id;
+      const { courseId, examDate, location, notes } = req.body;
+      
+      if (!courseId || !examDate) {
+        return res.status(400).json({ message: 'Course ID and exam date are required' });
+      }
+      
+      // Check if user is enrolled in the course
+      const isEnrolled = await storage.isUserEnrolledInCourse(userId, courseId);
+      if (!isEnrolled) {
+        return res.status(403).json({ message: 'You must be enrolled in this course to add exam details' });
+      }
+      
+      // Create exam timetable entry
+      const timetable = await storage.createExamTimetable({
+        userId,
+        courseId,
+        examDate: new Date(examDate),
+        location,
+        notes
+      });
+      
+      // Get course details
+      const course = await storage.getCourse(courseId);
+      
+      return res.status(201).json({
+        message: 'Exam timetable entry created successfully',
+        timetable: {
+          ...timetable,
+          course
+        }
+      });
+    } catch (error) {
+      console.error('Create exam timetable error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  app.put('/api/exam-timetable/:id', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.session.user!.id;
+      const timetableId = parseInt(req.params.id);
+      const { examDate, location, notes } = req.body;
+      
+      // Find the timetable entry
+      const timetable = await storage.getExamTimetable(timetableId);
+      
+      if (!timetable) {
+        return res.status(404).json({ message: 'Exam timetable entry not found' });
+      }
+      
+      // Ensure the user owns this timetable entry
+      if (timetable.userId !== userId) {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+      
+      // Update the timetable entry
+      const updatedTimetable = await storage.updateExamTimetable(timetableId, {
+        examDate: examDate ? new Date(examDate) : undefined,
+        location,
+        notes
+      });
+      
+      // Get course details
+      const course = await storage.getCourse(timetable.courseId);
+      
+      return res.status(200).json({
+        message: 'Exam timetable entry updated successfully',
+        timetable: {
+          ...updatedTimetable,
+          course
+        }
+      });
+    } catch (error) {
+      console.error('Update exam timetable error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  app.delete('/api/exam-timetable/:id', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.session.user!.id;
+      const timetableId = parseInt(req.params.id);
+      
+      // Find the timetable entry
+      const timetable = await storage.getExamTimetable(timetableId);
+      
+      if (!timetable) {
+        return res.status(404).json({ message: 'Exam timetable entry not found' });
+      }
+      
+      // Ensure the user owns this timetable entry
+      if (timetable.userId !== userId) {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+      
+      // Delete the timetable entry
+      await storage.deleteExamTimetable(timetableId);
+      
+      return res.status(200).json({ message: 'Exam timetable entry deleted successfully' });
+    } catch (error) {
+      console.error('Delete exam timetable error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Add an endpoint to check enrollment status
+  app.get('/api/enrollments/:courseId', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.session.user!.id;
+      const courseId = parseInt(req.params.courseId);
+      
+      const isEnrolled = await storage.isUserEnrolledInCourse(userId, courseId);
+      
+      return res.status(200).json({ isEnrolled });
+    } catch (error) {
+      console.error('Enrollment check error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Course materials access check
+  app.get('/api/course/:courseId/materials', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.session.user!.id;
+      const courseId = parseInt(req.params.courseId);
+      
+      // Check if user is enrolled in the course
+      const isEnrolled = await storage.isUserEnrolledInCourse(userId, courseId);
+      
+      if (!isEnrolled && req.session.user!.role !== 'admin') {
+        return res.status(403).json({ message: 'You must be enrolled in this course to access materials' });
+      }
+      
+      // Get course materials
+      const materials = await storage.getCourseMaterials(courseId);
+      
+      return res.status(200).json({ materials });
+    } catch (error) {
+      console.error('Course materials error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/admin/materials', upload.single('file'), async (req: Request, res: Response) => {
+    if (!isAuthenticated(req) || req.session.user!.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    
+    try {
+      const { courseId, title, type, content } = req.body;
+      const file = req.file;
+      
+      // Validate required fields
+      if (!courseId || !title || !type) {
+        return res.status(400).json({ message: 'Course ID, title, and type are required fields' });
+      }
+      
+      // Determine fields based on type
+      let fileUrl = undefined;
+      let duration = undefined;
+      let pages = undefined;
+      let questions = undefined;
+      
+      if (file) {
+        fileUrl = file.path;
+        
+        if (type.toLowerCase() === 'pdf' && file.mimetype === 'application/pdf') {
+          try {
+            const pdfData = await pdfParse(fs.readFileSync(file.path));
+            pages = pdfData.numpages;
+          } catch (err) {
+            console.error('Error parsing PDF:', err);
+          }
+        }
+      }
+      
+      if (type.toLowerCase() === 'video') {
+        duration = req.body.duration;
+      } else if (type.toLowerCase() === 'quiz') {
+        questions = parseInt(req.body.questions);
+      }
+      
+      // Create the material
+      const newMaterial = await storage.createCourseMaterial({
+        courseId: parseInt(courseId),
+        title,
+        type,
+        content: content || '',
+        fileUrl,
+        duration,
+        pages: pages ? parseInt(pages) : undefined,
+        questions
+      });
+      
+      return res.status(201).json({ 
+        message: 'Material created successfully',
+        material: newMaterial
+      });
+    } catch (error) {
+      console.error('Material creation error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/admin/courses/:id/exams', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req) || req.session.user!.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    
+    try {
+      const courseId = parseInt(req.params.id);
+      const { title, description, type, date } = req.body;
+      
+      // Validate required fields
+      if (!title || !type) {
+        return res.status(400).json({ message: 'Title and type are required fields' });
+      }
+      
+      // Create the exam
+      const newExam = await storage.createExam({
+        courseId,
+        title,
+        description: description || '',
+        type,
+        date: date ? new Date(date) : undefined
+      });
+      
+      return res.status(201).json({ 
+        message: 'Exam created successfully',
+        exam: newExam
+      });
+    } catch (error) {
+      console.error('Exam creation error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Material viewing endpoint for PDFs
+  app.get('/api/materials/:id/view', async (req: Request, res: Response) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.session.user!.id;
+      const materialId = parseInt(req.params.id);
+      
+      // Get material
+      const material = await storage.getCourseMaterial(materialId);
+      if (!material) {
+        return res.status(404).json({ message: 'Material not found' });
+      }
+      
+      // Check if user is enrolled in the course or is admin
+      const isEnrolled = await storage.isUserEnrolledInCourse(userId, material.courseId);
+      if (!isEnrolled && req.session.user!.role !== 'admin') {
+        return res.status(403).json({ message: 'You must be enrolled in this course to view materials' });
+      }
+      
+      // If material is a PDF and has a file URL, prepare for viewing
+      if (material.type.toLowerCase() === 'pdf' && material.fileUrl) {
+        // Convert from server path to Express static URL if needed
+        let pdfUrl = material.fileUrl;
+        if (pdfUrl.startsWith(uploadDir)) {
+          pdfUrl = pdfUrl.replace(uploadDir, '/uploads');
+        }
+        
+        return res.status(200).json({ 
+          material,
+          pdfUrl
+        });
+      } else {
+        return res.status(200).json({ material });
+      }
+    } catch (error) {
+      console.error('Material view error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Register AI Tutor routes
+  app.use('/api/tutor', tutorRoutes);
 
   const httpServer = createServer(app);
 

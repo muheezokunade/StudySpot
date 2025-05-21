@@ -8,11 +8,16 @@ import {
   Calendar, 
   Briefcase,
   GraduationCap,
-  Filter
+  Filter,
+  PlusCircle
 } from 'lucide-react';
 import { Job } from '../types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+
+interface JobsResponse {
+  jobs: Job[];
+}
 import {
   Card,
   CardContent,
@@ -30,18 +35,83 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuthContext } from '@/context/AuthContext';
+
+// Location filter component
+const LocationFilterSelect = ({ value, onChange }: { value: string, onChange: (value: string) => void }) => (
+  <Select value={value} onValueChange={onChange}>
+    <SelectTrigger className="w-[140px]">
+      <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+      <SelectValue placeholder="Location" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectGroup>
+        <SelectItem value="all">All Locations</SelectItem>
+        <SelectItem value="remote">Remote</SelectItem>
+        <SelectItem value="lagos">Lagos</SelectItem>
+        <SelectItem value="abuja">Abuja</SelectItem>
+        <SelectItem value="port harcourt">Port Harcourt</SelectItem>
+      </SelectGroup>
+    </SelectContent>
+  </Select>
+);
+
+// Job type filter component
+const JobTypeFilterSelect = ({ value, onChange }: { value: string, onChange: (value: string) => void }) => (
+  <Select value={value} onValueChange={onChange}>
+    <SelectTrigger className="w-[140px]">
+      <Briefcase className="h-4 w-4 mr-1 text-gray-400" />
+      <SelectValue placeholder="Job Type" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectGroup>
+        <SelectItem value="all">All Types</SelectItem>
+        <SelectItem value="full-time">Full-time</SelectItem>
+        <SelectItem value="part-time">Part-time</SelectItem>
+        <SelectItem value="internship">Internship</SelectItem>
+        <SelectItem value="remote">Remote</SelectItem>
+        <SelectItem value="hybrid">Hybrid</SelectItem>
+      </SelectGroup>
+    </SelectContent>
+  </Select>
+);
+
+// Faculty filter component
+const FacultyFilterSelect = ({ value, onChange, faculties }: { value: string, onChange: (value: string) => void, faculties: string[] }) => (
+  <Select value={value} onValueChange={onChange}>
+    <SelectTrigger className="w-[140px]">
+      <GraduationCap className="h-4 w-4 mr-1 text-gray-400" />
+      <SelectValue placeholder="Faculty" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectGroup>
+        <SelectItem value="all">All Faculties</SelectItem>
+        {faculties.map(fac => (
+          <SelectItem key={fac} value={fac.toLowerCase()}>
+            {fac}
+          </SelectItem>
+        ))}
+      </SelectGroup>
+    </SelectContent>
+  </Select>
+);
 
 const JobBoard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [locationType, setLocationType] = useState<string>('');
-  const [jobType, setJobType] = useState<string>('');
-  const [faculty, setFaculty] = useState<string>('');
+  const [locationType, setLocationType] = useState<string>('all');
+  const [jobType, setJobType] = useState<string>('all');
+  const [faculty, setFaculty] = useState<string>('all');
+  const { user } = useAuthContext();
   
   // Get jobs with filters as query parameters
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<JobsResponse>({
     queryKey: [
       '/api/jobs', 
-      { location: locationType, type: jobType, faculty }
+      { 
+        location: locationType === 'all' ? '' : locationType, 
+        type: jobType === 'all' ? '' : jobType, 
+        faculty: faculty === 'all' ? '' : faculty 
+      }
     ],
   });
 
@@ -51,7 +121,7 @@ const JobBoard: React.FC = () => {
     
     if (!searchTerm.trim()) return data.jobs;
     
-    return data.jobs.filter(job => 
+    return data.jobs.filter((job: Job) => 
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -103,10 +173,23 @@ const JobBoard: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="glass-card p-6 mb-8">
-        <h1 className="text-2xl font-bold text-forest-800 mb-2">Job Board</h1>
-        <p className="text-gray-600">Find your next successful career opportunity</p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-forest-800 mb-2">Job Board</h1>
+            <p className="text-gray-600">Find your next successful career opportunity</p>
+          </div>
+          
+          <Link href="/jobs/new">
+            <a>
+              <Button className="mt-4 sm:mt-0 bg-forest-600 hover:bg-forest-700">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Post a Job
+              </Button>
+            </a>
+          </Link>
+        </div>
         
-        <div className="mt-6 flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+        <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 sm:items-center">
           <div className="relative flex-grow">
             <Input
               type="text"
@@ -118,96 +201,49 @@ const JobBoard: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            <Select value={locationType} onValueChange={setLocationType}>
-              <SelectTrigger className="w-[140px]">
-                <MapPin className="h-4 w-4 mr-1 text-gray-400" />
-                <SelectValue placeholder="Location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all_locations">All Locations</SelectItem>
-                  <SelectItem value="remote">Remote</SelectItem>
-                  <SelectItem value="lagos">Lagos</SelectItem>
-                  <SelectItem value="abuja">Abuja</SelectItem>
-                  <SelectItem value="port harcourt">Port Harcourt</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            
-            <Select value={jobType} onValueChange={setJobType}>
-              <SelectTrigger className="w-[140px]">
-                <Briefcase className="h-4 w-4 mr-1 text-gray-400" />
-                <SelectValue placeholder="Job Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all_types">All Types</SelectItem>
-                  <SelectItem value="full-time">Full-time</SelectItem>
-                  <SelectItem value="part-time">Part-time</SelectItem>
-                  <SelectItem value="internship">Internship</SelectItem>
-                  <SelectItem value="remote">Remote</SelectItem>
-                  <SelectItem value="hybrid">Hybrid</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            
-            <Select value={faculty} onValueChange={setFaculty}>
-              <SelectTrigger className="w-[140px]">
-                <GraduationCap className="h-4 w-4 mr-1 text-gray-400" />
-                <SelectValue placeholder="Faculty" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all_faculties">All Faculties</SelectItem>
-                  {faculties.map(fac => (
-                    <SelectItem key={fac} value={fac.toLowerCase()}>
-                      {fac}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+          <div className="flex space-x-2">
+            <LocationFilterSelect value={locationType} onChange={setLocationType} />
+            <JobTypeFilterSelect value={jobType} onChange={setJobType} />
+            <FacultyFilterSelect value={faculty} onChange={setFaculty} faculties={faculties} />
           </div>
         </div>
       </div>
-      
+
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <Skeleton key={i} className="h-64 w-full rounded-lg" />
+        <div className="space-y-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <CardHeader>
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent className="pb-6">
+                <Skeleton className="h-4 w-full mb-4" />
+                <Skeleton className="h-4 w-full mb-4" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+            </Card>
           ))}
         </div>
-      ) : error ? (
-        <div className="glass-card p-6 text-center">
-          <h2 className="text-xl font-semibold text-forest-800 mb-4">Error Loading Jobs</h2>
-          <p className="text-gray-600 mb-4">
-            We encountered an error while loading job listings. Please try again later.
-          </p>
-          <Button 
-            variant="default" 
-            className="bg-forest-600 hover:bg-forest-700"
-            onClick={() => window.location.reload()}
-          >
-            Refresh Page
-          </Button>
-        </div>
       ) : filteredJobs.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredJobs.map(job => (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredJobs.map((job: Job) => (
             <Card key={job.id} className="overflow-hidden hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between">
-                  <CardTitle className="text-lg font-semibold">{job.title}</CardTitle>
-                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getJobTypeBadgeColor(job.type)}`}>
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-lg">{job.title}</CardTitle>
+                    <CardDescription className="flex items-center mt-1">
+                      <Building className="h-3.5 w-3.5 mr-1 text-gray-400" />
+                      {job.company}
+                    </CardDescription>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getJobTypeBadgeColor(job.type)}`}>
                     {job.type || 'Not specified'}
                   </span>
                 </div>
-                <CardDescription className="flex items-center mt-1">
-                  <Building className="h-4 w-4 mr-1 text-gray-500" />
-                  {job.company}
-                </CardDescription>
               </CardHeader>
+              
               <CardContent>
                 <div className="flex items-center mb-2">
                   <MapPin className="h-4 w-4 mr-1 text-forest-500" />
@@ -232,38 +268,27 @@ const JobBoard: React.FC = () => {
                 </div>
                 
                 <Link href={`/jobs/${job.id}`}>
-                  <Button variant="default" size="sm" className="bg-forest-600 hover:bg-forest-700">
-                    View Details
-                  </Button>
+                  <a>
+                    <Button variant="default" size="sm" className="bg-forest-600 hover:bg-forest-700">
+                      View Details
+                    </Button>
+                  </a>
                 </Link>
               </CardFooter>
             </Card>
           ))}
         </div>
       ) : (
-        <div className="glass-card p-6 text-center">
-          <Filter className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-          <h2 className="text-xl font-semibold text-forest-800 mb-2">No Jobs Found</h2>
-          <p className="text-gray-600 mb-4">
-            {searchTerm || locationType || jobType || faculty 
-              ? "No jobs match your current filters. Try adjusting your search criteria." 
-              : "No job opportunities are available at the moment."}
-          </p>
-          
-          {(searchTerm || locationType || jobType || faculty) && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchTerm('');
-                setLocationType('');
-                setJobType('');
-                setFaculty('');
-              }}
-              className="text-forest-600 border-forest-600 hover:bg-forest-50"
-            >
-              Clear All Filters
-            </Button>
-          )}
+        <div className="glass-card p-8 text-center">
+          <h3 className="text-xl font-medium text-gray-700 mb-4">No Jobs Found</h3>
+          <p className="text-gray-600 mb-6">No job opportunities are available at the moment.</p>
+          <Link href="/jobs/new">
+            <a>
+              <Button className="bg-forest-600 hover:bg-forest-700">
+                Post a Job
+              </Button>
+            </a>
+          </Link>
         </div>
       )}
     </div>
