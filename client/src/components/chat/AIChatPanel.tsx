@@ -141,7 +141,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ isOpen, onClose }) => {
       setUploadedMaterial(e.target.files[0]);
       // Send file to backend
       const formData = new FormData();
-      formData.append('material', e.target.files[0]);
+      formData.append('file', e.target.files[0]);
       
       // Show loading state
       setUploadPreview('Loading...');
@@ -149,7 +149,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ isOpen, onClose }) => {
       try {
         console.log('Uploading file:', e.target.files[0].name, 'Size:', e.target.files[0].size, 'Type:', e.target.files[0].type);
         
-        const res = await fetch('/api/teacher/upload', {
+        const res = await fetch('/api/simple-upload', {
           method: 'POST',
           body: formData,
         });
@@ -260,6 +260,14 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ isOpen, onClose }) => {
                 <pre className="whitespace-pre-wrap">{uploadPreview}</pre>
               </div>
             )}
+          </div>
+        )}
+        
+        {/* Upload preview - add this to show the file upload status */}
+        {uploadPreview && (
+          <div className="px-3 py-2 bg-gray-50 border-t text-sm">
+            <p className="font-medium mb-1">Uploaded File:</p>
+            <p className="text-sm text-gray-600">{uploadPreview}</p>
           </div>
         )}
         

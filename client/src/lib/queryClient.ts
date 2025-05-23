@@ -1,5 +1,13 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Get the API base URL based on environment
+const getApiBaseUrl = () => {
+  // In production, the API is either proxied by netlify or direct to render
+  return process.env.NODE_ENV === 'production'
+    ? '/api'  // This will be proxied via Netlify to the appropriate backend
+    : '/api'; // In development, this is served by the local server
+};
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -7,21 +15,30 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
+export const apiRequest = async (
   method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
+  endpoint: string,
+  body?: any,
+  headers?: Record<string, string>
+) => {
+  const url = `${getApiBaseUrl()}${endpoint}`;
+  const options: RequestInit = {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    credentials: 'include',
+  };
 
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  const res = await fetch(url, options);
   await throwIfResNotOk(res);
   return res;
-}
+};
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
@@ -47,7 +64,7 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      staleTime: 60 * 1000, // 1 minute
       retry: false,
     },
     mutations: {

@@ -3,16 +3,25 @@ import { OpenAI } from 'openai';
 // Use a placeholder key for development if real key is not available
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'placeholder-key-for-development';
 
+console.log('Environment API key value:', OPENAI_API_KEY ? 'API key exists' : 'No API key found');
+
 // Set OpenAI model to use
-const OPENAI_MODEL = 'gpt-4o'; // Change this to a model you have access to
+const OPENAI_MODEL = 'gpt-3.5-turbo'; // Using gpt-3.5-turbo which is more widely available
+
+// Debug: Print part of the API key to verify it's loaded
+const firstChars = OPENAI_API_KEY.substring(0, 10);
+const lastChars = OPENAI_API_KEY.substring(OPENAI_API_KEY.length - 5);
+console.log(`API Key loaded - starts with: ${firstChars}... ends with: ...${lastChars}`);
 
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
 });
 
-// Check if we have a valid API key
-const hasValidApiKey = OPENAI_API_KEY !== 'placeholder-key-for-development';
+// Check if we have a valid API key - explicitly check for sk-proj- prefix too
+const hasValidApiKey = OPENAI_API_KEY !== 'placeholder-key-for-development' && 
+                      (OPENAI_API_KEY.startsWith('sk-') || OPENAI_API_KEY.startsWith('sk-proj-'));
+console.log(`API Key valid: ${hasValidApiKey}, starts with sk-proj-: ${OPENAI_API_KEY.startsWith('sk-proj-')}`);
 
 type ChatMessage = {
   role: "system" | "user" | "assistant";

@@ -69,6 +69,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
+  // Health check endpoint for deployment
+  app.get('/api/health', (req: Request, res: Response) => {
+    return res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+  
   // Authentication routes
   app.post('/api/auth/signup', async (req: Request, res: Response) => {
     try {
@@ -1336,6 +1341,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register AI Tutor routes
   app.use('/api/tutor', tutorRoutes);
+
+  // Simple file upload endpoint without authentication
+  app.post('/api/simple-upload', uploadSimple.single('file'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+      
+      // Return success with file information
+      return res.status(200).json({ 
+        success: true, 
+        message: 'File uploaded successfully',
+        file: {
+          filename: req.file.filename,
+          originalname: req.file.originalname,
+          size: req.file.size,
+          path: req.file.path
+        },
+        preview: `Uploaded ${req.file.originalname} (${Math.round(req.file.size/1024)} KB)`
+      });
+    } catch (error) {
+      console.error('Simple upload error:', error);
+      return res.status(500).json({ 
+        success: false,
+        message: error instanceof Error ? error.message : 'Error uploading file' 
+      });
+    }
+  });
+
+  // Test upload endpoint without authentication
+  app.post('/api/test-upload', upload.single('file'), async (req: Request, res: Response) => {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+    
+    // Return success with file information
+    return res.status(200).json({ 
+      success: true, 
+      message: 'File uploaded successfully',
+      file: {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        size: req.file.size,
+        path: req.file.path
+      },
+      preview: `Uploaded ${req.file.originalname} (${Math.round(req.file.size/1024)} KB)`
+    });
+  });
 
   const httpServer = createServer(app);
 

@@ -30,6 +30,7 @@ import ExamSchedule from './pages/ExamSchedule';
 import MyProgress from './pages/MyProgress';
 import AITutor from './pages/AITutor';
 import AIChatPanel from './components/chat/AIChatPanel';
+import JobDetail from './pages/JobDetail';
 
 // Import components
 import Header from './components/layout/Header';
@@ -155,6 +156,11 @@ const App: React.FC = () => {
                   <Route path="/jobs/new" element={
                     <MainLayout onAIChatOpen={handleAIChatOpen} onMobileMenuOpen={handleMobileMenuOpen}>
                       <NewJob />
+                    </MainLayout>
+                  } />
+                  <Route path="/jobs/:id" element={
+                    <MainLayout onAIChatOpen={handleAIChatOpen} onMobileMenuOpen={handleMobileMenuOpen}>
+                      <JobDetail />
                     </MainLayout>
                   } />
                   <Route path="/forum" element={

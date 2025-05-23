@@ -1,10 +1,34 @@
+// Load environment variables from .env file
+import dotenv from 'dotenv';
+const result = dotenv.config({ path: '.env', debug: true });
+console.log('Environment variables loaded:', result.parsed ? 'success' : 'failed', 
+            result.error ? `Error: ${result.error.message}` : '');
+console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+console.log('Database URL exists:', !!process.env.DATABASE_URL);
+
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Configure CORS for production
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://studyspot.netlify.app', /\.netlify\.app$/] 
+    : 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 
 app.use((req, res, next) => {
   const start = Date.now();
